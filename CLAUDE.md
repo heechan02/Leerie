@@ -12,11 +12,28 @@
 ## Layout
 | Folder | Workstream | Origin |
 | --- | --- | --- |
-| `app/` | 1. Flutter iOS app | Leerie `sensor/` (github.com/heechan02/Leerie) |
-| `db/` | 2. Supabase SQL: tables, RLS, hotspot trigger | Leerie schema, adapted |
+| `sensor/` | 1. Flutter iOS app | Leerie `sensor/` (github.com/heechan02/Leerie) |
+| `supabase/` | 2. Supabase SQL: tables, RLS, hotspot trigger | Leerie `supabase/`, adapted |
 | `pipeline/` | 3. Python: clean, match, predict, score, routing service | new |
 | `dashboard/` | 4. Next.js + MapLibre: scan map, routes, budget planner | Leerie dashboard |
 | `data/` | Shared files between workstreams (see contract) | |
+
+## Starting code
+- `sensor/` is Flutter but **Android-only**: there is no `ios/` folder. Generate one with
+  `flutter create . --platforms ios`, then add `NSCameraUsageDescription` and
+  `NSLocationWhenInUseUsageDescription` to `ios/Runner/Info.plist`.
+- The camera already uses `ImageFormatGroup.yuv420` (NV12 on iOS), so `planes[0]` is the Y plane
+  the brief's brightness code expects. The app picks the first back camera; lock it to the wide camera.
+- The Supabase URL and anon key are set with `--dart-define` or in the in-app Settings sheet.
+  Phones hardcode demo scanner UUIDs in `config.dart`; replace them with a random `session_id` per walk.
+- Breadcrumbs post to `scanner_positions` (`sensor/lib/data/models.dart`, `supabase_rest.dart`);
+  point them at `light_readings`.
+- `supabase/migrations/20260901000000_init.sql` has the clustering trigger to adapt
+  (`detections_cluster`). Its `demo_all` policies are wide open, so don't copy them.
+- `dashboard/` is Next.js 16 + MapLibre + zustand, and runs on synthetic data with no `.env.local`.
+  Reuse `components/console/map/RouteLayer.tsx`, `DispatchSheet.tsx` (planner layout) and `lib/map/style.ts`.
+  Clients read `*_map` views, because PostgREST returns geography as hex WKB.
+- Drop: the accelerometer/vision detectors, `contractor/`, `/api/plan-route` (OSRM), `/api/dispatch` (Resend) and the crew pages.
 
 ## The one shared contract
 Everything downstream reads `data/segments.geojson`, one feature per OSM street segment.

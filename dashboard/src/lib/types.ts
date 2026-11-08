@@ -1,0 +1,155 @@
+// Row shapes for the read-model views in supabase/migrations/20260901000000_init.sql.
+// Keep in sync with the views; PostgREST returns exactly these columns.
+
+export type HazardStatus =
+  | "suspected"
+  | "confirmed"
+  | "scheduled"
+  | "repaired"
+  | "false_positive";
+
+export type WorkOrderStatus =
+  | "open"
+  | "assigned"
+  | "in_progress"
+  | "done"
+  | "cancelled";
+
+export type RouteStatus = "draft" | "published" | "in_progress" | "completed";
+
+/** Row of `hazards_map` (and `repair_queue`, which is a filtered subset). */
+export interface HazardMapRow {
+  id: string;
+  authority_id: string;
+  road_name: string | null;
+  status: HazardStatus;
+  severity: number;
+  detection_count: number;
+  distinct_scanners: number;
+  first_detected_at: string;
+  last_detected_at: string;
+  repaired_at: string | null;
+  updated_at: string;
+  lng: number;
+  lat: number;
+  photo_url: string | null;
+  priority: number;
+}
+
+/** Row of `latest_scanner_positions`. */
+export interface ScannerPositionRow {
+  scanner_id: string;
+  trip_id: string;
+  recorded_at: string;
+  lng: number;
+  lat: number;
+  speed_mps: number | null;
+  heading_deg: number | null;
+  label: string;
+  fleet_type: string;
+  route_ref: string | null;
+}
+
+export interface Crew {
+  id: string;
+  authority_id: string;
+  name: string;
+  shift_minutes: number;
+  repairs_per_shift: number;
+}
+
+export interface WorkOrder {
+  id: string;
+  hazard_id: string;
+  crew_id: string | null;
+  route_plan_id: string | null;
+  stop_order: number | null;
+  status: WorkOrderStatus;
+  eta: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  before_photo_url: string | null;
+  after_photo_url: string | null;
+  notes: string | null;
+  hazard?: HazardMapRow;
+}
+
+/** Row of `route_plans_map` with the nested embed used by the dashboard and crew page. */
+export interface RoutePlanMapRow {
+  id: string;
+  crew_id: string;
+  plan_date: string;
+  status: RouteStatus;
+  total_km: number | null;
+  total_minutes: number | null;
+  baseline_km: number | null;
+  objective: Record<string, unknown> | null;
+  path_geojson: { type: "LineString"; coordinates: [number, number][] } | null;
+  crew?: Crew;
+  work_orders?: WorkOrder[];
+}
+
+/** One turn instruction along a planned path (spec section 5). */
+export interface RouteStep {
+  instruction: string; // "Turn left onto Millbank"
+  lng: number;
+  lat: number;
+  distance_m: number;
+}
+
+/** A route anchor after the server resolved it to a coordinate (spec section 5). */
+export interface ResolvedAnchor {
+  lng: number;
+  lat: number;
+  label: string; // "Depot", or the hazard's "ref - street"
+}
+
+// ─── /api/plan-route contract (docs/ARCHITECTURE.md §5) ────────────────────────────
+
+export type PlanMode = "manual" | "count" | "time";
+
+export interface PlanRouteRequest {
+  crew_id: string;
+  plan_date: string; // YYYY-MM-DD
+  mode: PlanMode;
+  hazard_ids?: string[]; // manual
+  max_stops?: number; // count
+  time_budget_min?: number; // time
+  area?: GeoJSON.Polygon;
+  service_min_per_stop?: number;
+  /** Start the route at this queue hazard instead of the crew depot. */
+  start_hazard_id?: string;
+  /** End the route at this queue hazard instead of back at the start. */
+  end_hazard_id?: string;
+}
+
+export interface PlanRouteStop {
+  work_order_id: string;
+  hazard_id: string;
+  stop_order: number;
+  eta: string;
+  lng: number;
+  lat: number;
+  severity: number;
+  photo_url: string | null;
+}
+
+export interface PlanRouteResponse {
+  route_plan_id: string;
+  stops: PlanRouteStop[];
+  total_km: number;
+  total_minutes: number;
+  baseline_km: number;
+  path: { type: "LineString"; coordinates: [number, number][] };
+  /** Turn instructions along `path`; empty when the route fell back to a straight line. */
+  steps: RouteStep[];
+  /** Where the route starts, resolved server-side (spec §5). */
+  start: ResolvedAnchor;
+  /** Where it ends; equals `start` on a closed loop. */
+  end: ResolvedAnchor;
+}
+
+export interface DispatchRequest {
+  route_plan_id: string;
+  to: string[];
+}

@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Leerie design tokens.
+
+   Palette is derived from the GOV.UK Design System, because the reader is a
+   public official who is accountable to a committee and recognises this
+   register on sight. Every value below either comes from that palette or is
+   checked against it for contrast. Never inline a hex.
+   ========================================================================== */
+
+:root {
+  /* -- Ink ---------------------------------------------------------------- */
+  --ink: #0b0c0c;          /* GOV.UK black. Body ink.                        */
+  --ink-2: #505a5f;        /* GOV.UK secondary. 7.0:1 on white.              */
+  --ink-3: #4a5054;        /* Tertiary, still 4.5:1 on the canvas.           */
+
+  /* -- Ground ------------------------------------------------------------- */
+  --surface: #ffffff;      /* The sheet. Where the work happens.             */
+  --canvas: #f3f2f1;       /* GOV.UK light grey. Inset and recessed areas.   */
+  --rule: #b1b4b6;         /* GOV.UK mid grey. Real borders.                 */
+  --rule-soft: #e4e2e0;    /* Hairlines inside a panel.                      */
+
+  /* -- Command chrome ----------------------------------------------------- */
+  /* The bar and the rail carry one colour and make a single L around the
+     work, so the chrome reads as furniture rather than a strip laid on top. */
+  --rail: #0b1e33;
+  --rail-2: #16304a;       /* Raised surface on the rail.                    */
+  --rail-3: #21445f;       /* Hover on the rail.                             */
+  --rail-ink: #ffffff;     /* 15.9:1 on rail.                                */
+  --rail-ink-2: #a8bdd1;   /* 8.3:1 on rail. Secondary on chrome.            */
+  --rail-rule: #24435f;
+
+  /* Feed connectivity dot on the rail. Chrome only, not part of the
+     work-status lanes below: this says "is data arriving", never
+     "proposed" or "committed".                                            */
+  --feed-live: #5bc47f;
+  --feed-idle: #c8a63a;
+
+  /* -- Meaning ------------------------------------------------------------
+     Two lanes, and only two. Blue is work proposed; green is work committed.
+     That distinction is the whole product, so it is the only place a second
+     hue is spent. Severity never uses either: it has size and a bar of its
+     own, so magnitude can never be mistaken for state.                      */
+  --action: #1d70b8;       /* GOV.UK blue. 4.6:1 on white. The one button.   */
+  --action-hover: #155a92;
+  --action-ink: #ffffff;   /* 4.6:1 on action.                               */
+  --action-soft: #e7f0f7;
+  --action-edge: #9dc2de;
+
+  --committed: #00703c;    /* GOV.UK green. Scheduled and dispatched.        */
+  --committed-soft: #e0efe7;
+  --committed-edge: #94c4ac;
+
+  --severe: #942514;       /* Grade 4 only. Rare by construction.            */
+  --closed: #6f777b;       /* Repaired. Drains out of the working palette.   */
+
+  /* GOV.UK focus. Yellow block with a black underline: the single most
+     recognisable civic interaction detail there is, and it costs nothing. */
+  --focus: #ffdd00;
+  --focus-ink: #0b0c0c;
+
+  /* -- Type ---------------------------------------------------------------
+     Public Sans is a government-commissioned face, open licensed, and the
+     nearest honest equivalent to GDS Transport. Plex Mono carries the
+     identifiers, coordinates and clock times, because those are read aloud
+     down a phone and transcribed into a work order.                        */
+  --font-ui: var(--font-public-sans), system-ui, sans-serif;
+  --font-data: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Six steps, no more. Anything between these is an accident. */
+  --t-micro: 11px;         /* Uppercase labels, legend, axis marks.          */
+  --t-small: 13px;         /* Secondary lines, evidence, captions.           */
+  --t-body: 15px;          /* Row primary, body copy.                        */
+  --t-lead: 17px;          /* Wordmark, panel titles.                        */
+  --t-title: 21px;         /* Detail record heading.                         */
+  --t-metric: 30px;        /* Counts.                                        */
+
+  /* -- Space -------------------------------------------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-full: 999px;
+
+  --shadow-1: 0 1px 2px rgb(11 12 12 / 0.10), 0 1px 1px rgb(11 12 12 / 0.06);
+  --shadow-2: 0 4px 12px rgb(11 12 12 / 0.12), 0 1px 3px rgb(11 12 12 / 0.08);
+  --shadow-3: 0 16px 40px rgb(11 12 12 / 0.18), 0 2px 8px rgb(11 12 12 / 0.10);
+
+  --ease: cubic-bezier(.2, .6, .2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--t-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; line-height: 1.25; }
+button { font: inherit; color: inherit; }
+
+/* -- Browser surfaces -------------------------------------------------------
+   The parts we did not draw still carry the design. */
+::selection { background: var(--focus); color: var(--focus-ink); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: var(--r-full); border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-2); background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+:focus { outline: none; }
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  box-shadow: 0 4px 0 0 var(--focus-ink);
+  border-radius: 0;
+}
+
+@keyframes bch-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+@keyframes bch-rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* -- Type utilities --------------------------------------------------------- */
+.data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.micro {
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.secondary { color: var(--ink-2); }
+
+/* -- Buttons ---------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  height: 38px;
+  padding: 0 var(--s4);
+  font-size: var(--t-small);
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms linear, border-color 120ms linear, color 120ms linear;
+}
+.btn:disabled { cursor: not-allowed; }
+
+.btn-primary { background: var(--action); color: var(--action-ink); }
+.btn-primary:not(:disabled):hover { background: var(--action-hover); }
+.btn-primary:disabled { background: var(--canvas); color: var(--ink-2); border-color: var(--rule); }
+
+.btn-commit { background: var(--committed); color: #fff; }
+.btn-commit:not(:disabled):hover { background: #005a30; }
+
+.btn-secondary { border-color: var(--rule); color: var(--ink); background: var(--surface); }
+.btn-secondary:not(:disabled):hover { background: var(--canvas); border-color: var(--ink-2); }
+
+.btn-quiet { color: var(--ink-2); }
+.btn-quiet:not(:disabled):hover { background: var(--canvas); color: var(--ink); }
+
+.btn-sm { height: 30px; padding: 0 var(--s3); font-size: var(--t-micro); letter-spacing: 0.04em; }
+
+/* -- Status tag -------------------------------------------------------------
+   Status is always spelled out. Colour never carries a meaning alone. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 var(--s2);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--r-sm);
+  border: 1px solid;
+  white-space: nowrap;
+}
+.tag-suspected { color: var(--ink-2); border-color: var(--rule); background: var(--surface); }
+.tag-confirmed { color: var(--action); border-color: var(--action-edge); background: var(--action-soft); }
+.tag-scheduled { color: var(--committed); border-color: var(--committed-edge); background: var(--committed-soft); }
+.tag-repaired  { color: var(--closed); border-color: var(--rule); background: var(--canvas); }
+
+/* -- Map surfaces -----------------------------------------------------------
+   The basemap is desaturated at the tile level so the data always outranks
+   the map. These rules only tidy up what the vendor injects. */
+.maplibregl-ctrl-attrib { font-size: 10px !important; }
+.maplibregl-ctrl-bottom-right { margin-bottom: 2px; }
+
+/* MapLibre controls restyled to the tokens (from console-map). */
+.maplibregl-ctrl-scale {
+  margin: 0 var(--s4) var(--s4) 0;
+  padding: 2px var(--s2) var(--s1);
+  border: 0; border-bottom: 2px solid var(--ink-2);
+  background: var(--surface); box-shadow: var(--shadow-1); border-radius: var(--r-md);
+  font: 11px/1.4 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.maplibregl-ctrl-attrib { font: 10px/1.4 var(--font-ui); background: color-mix(in srgb, var(--surface) 85%, transparent); }
+.maplibregl-ctrl-attrib a { color: var(--ink-2); }
+.maplibregl-map { font-family: var(--font-ui); }
+.maplibregl-marker { will-change: transform; z-index: 20; }
