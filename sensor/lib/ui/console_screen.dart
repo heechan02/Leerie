@@ -4,6 +4,7 @@
 // reach.
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/format.dart';
 import '../data/models.dart';
@@ -218,7 +219,16 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               children: <Widget>[
                 Semantics(
                   header: true,
-                  child: const Text('Leerie', style: BchType.wordmark),
+                  link: true,
+                  label: 'Leerie, opens the map at leerie.vercel.app',
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    onTap: () => launchUrl(
+                      Uri.parse('https://leerie.vercel.app'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: const Text('Leerie', style: BchType.wordmark),
+                  ),
                 ),
                 const SizedBox(height: BchSpace.s1),
                 Row(
