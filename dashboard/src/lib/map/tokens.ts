@@ -61,3 +61,6 @@ export function readMapTokens(): MapTokens {
     water: readToken("--rule-soft", MAP_FALLBACK.ruleSoft),
   };
 }
+
+/** Horizontal GPS accuracy in metres: smaller is better; unknown is neutral. */
+export const GPS_ACCURACY = { good: "#72d69c", medium: NIGHT.lamp, poor: "#f16e65", unknown: NIGHT.mid } as const;

@@ -13,7 +13,7 @@ import math
 import statistics
 import struct
 import subprocess
-from datetime import datetime
+from pipeline.recording_windows import SELECTION, selected
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -108,15 +108,13 @@ def lamp_stats(ps: list, grid: dict) -> tuple[float, list[tuple[float, str]]]:
 
 def main() -> None:
     e = env()
-    readings = fetch(e, "light_readings", "session_id,recorded_at,location,gps_accuracy_m,speed_mps,brightness")
-    incidents = fetch(e, "incidents", "session_id,location,category")
+    readings = selected(fetch(e, "light_readings", "session_id,recorded_at,location,gps_accuracy_m,speed_mps,brightness"), "recorded_at")
+    incidents = selected(fetch(e, "incidents", "session_id,created_at,location,category"), "created_at")
 
-    # Clean: GPS accuracy, walking pace, exposure present, and darkness only (drop 06:30-16:00 UTC; Nov = GMT).
+    # The shared windows select readings and reports before quality checks and aggregation.
     clean = []
     for r in readings:
-        t = datetime.fromisoformat(r["recorded_at"])
-        day = (t.hour, t.minute) >= (6, 30) and t.hour < 16
-        if (r["brightness"] or 0) <= 0 or (r["gps_accuracy_m"] or 99) > MAX_ACCURACY_M or (r["speed_mps"] or 0) > MAX_SPEED_MPS or day:
+        if (r["brightness"] or 0) <= 0 or (r["gps_accuracy_m"] or 99) > MAX_ACCURACY_M or (r["speed_mps"] or 0) > MAX_SPEED_MPS:
             continue
         clean.append((xy(*point(r["location"])), r["session_id"], math.log2(r["brightness"])))
 
@@ -222,7 +220,7 @@ def main() -> None:
         })
     # Write then rename, so the live dashboard never reads a half-written file.
     tmp = DATA / "segments.geojson.tmp"
-    tmp.write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
+    tmp.write_text(json.dumps({"type": "FeatureCollection", "recording_selection": SELECTION, "features": feats}))
     tmp.replace(DATA / "segments.geojson")
     print(f"{len(readings)} readings, {len(clean)} clean, {sum(len(v) for s in per.values() for v in s.values())} matched; "
           f"{len(measured)} segments measured, {len(stops) - len(measured)} predicted, {len(incidents)} reports -> data/segments.geojson")

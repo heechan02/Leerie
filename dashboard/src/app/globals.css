@@ -26,6 +26,8 @@
   --amber-hot: #ffd27a;
   --amber-glow: rgb(245 181 74 / 0.35);
   --ember: #e8743b;
+  --gps-good: #72d69c;
+  --gps-poor: #f16e65;
   --on-amber: #1a1206;
 
   /* Reports: coral to crimson, never amber (amber means light here). */

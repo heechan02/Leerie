@@ -3,6 +3,7 @@
 // measured streets solid and predicted ones faded. Hover a street for its breakdown.
 // Plan mode: drag a box, enter budget and costs, and the planner picks the streets to light.
 import Link from "next/link";
+import type { RecordingSelection } from "@/lib/leerie/replay";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Source, ScaleControl, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
@@ -19,7 +20,7 @@ import { WeightSliders } from "./WeightSliders";
 
 if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
-type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props>;
+type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props> & { recording_selection?: RecordingSelection };
 
 const CENTER: [number, number] = [-3.181, 55.934]; // between George Square and King's Buildings
 const REFRESH_MS = 60_000; // the pipeline loop rewrites segments.geojson every minute while scanning
@@ -254,6 +255,8 @@ export function ScanMap() {
       </header>
 
       <aside className="lr-panel lr-glass" aria-label="Controls">
+        <Link href="/replay" className="lr-button lr-button-ghost">Replay last night ↗</Link>
+        {loaded?.data.recording_selection && <details className="lr-panel-intro"><summary>Data: 3 selected windows · 8 Nov · GMT</summary>{loaded.data.recording_selection.windows.map(([start, end]) => <div key={start} className="data">{start}–{end}</div>)}<p>Measurements and reports use only these windows. Predicted streets are recalculated from the selected measurements.</p></details>}
         <div className="lr-tabs" role="tablist" aria-label="View">
           {(["map", "plan"] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className="lr-tab"

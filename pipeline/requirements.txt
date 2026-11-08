@@ -1,0 +1,3 @@
+# Only the optional council lamp CSV importer needs a third-party package.
+# pipeline.run and pipeline.test_run use the Python standard library.
+pyproj==3.8.0
