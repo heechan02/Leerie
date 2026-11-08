@@ -1,6 +1,5 @@
-// Leerie sensor app. A phone in a council scanner's cradle, watching the road
-// through the camera and feeling it through the accelerometer, writing straight
-// to Supabase. Spec: docs/ARCHITECTURE.md §3.
+// Leerie scanner. A phone carried on a night walk measures exposure-corrected
+// light through the camera, tags it with GPS, and writes it straight to Supabase.
 //
 // Portrait only, on purpose: the frames the detector works on arrive in sensor
 // orientation and have to be rotated into the operator's view before the region
@@ -32,19 +31,19 @@ Future<void> main() async {
   ));
 
   final settings = await SensorSettings.load();
-  runApp(LeerieSensorApp(controller: SessionController(settings)));
+  runApp(LeerieApp(controller: SessionController(settings)));
 }
 
-class LeerieSensorApp extends StatefulWidget {
-  const LeerieSensorApp({super.key, required this.controller});
+class LeerieApp extends StatefulWidget {
+  const LeerieApp({super.key, required this.controller});
 
   final SessionController controller;
 
   @override
-  State<LeerieSensorApp> createState() => _LeerieSensorAppState();
+  State<LeerieApp> createState() => _LeerieAppState();
 }
 
-class _LeerieSensorAppState extends State<LeerieSensorApp> {
+class _LeerieAppState extends State<LeerieApp> {
   @override
   void initState() {
     super.initState();

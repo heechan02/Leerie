@@ -3,7 +3,7 @@
  *
  * Built on a 24 grid with one radius and one stroke weight so the silhouette
  * survives at 20px in a browser tab and at 8mm on a council letterhead. The
- * void is the product: everything Leerie does starts with a hole in a road.
+ * void is the product.
  */
 export function Mark({ size = 28 }: { size?: number }) {
   return (

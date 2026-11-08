@@ -370,7 +370,7 @@ class SessionController extends ChangeNotifier {
       _lastLumPaint = now;
       notifyListeners();
     }
-    // Leerie's hazard vision detector is not run: this app only measures light.
+    // The hazard vision detector is not run: this app only measures light.
   }
 
   void _capturePhoto(CameraImage image, DetectionEntry entry) {
@@ -482,7 +482,7 @@ class SessionController extends ChangeNotifier {
   // ─── Detections ───────────────────────────────────────────────────────────
 
   void _onAccelHit(AccelHit hit) {
-    // Night-light measures light only; Leerie's hazard detections table does not exist here.
+    // Leerie measures light only; the hazard detections table does not exist here.
     return;
     // ignore: dead_code
     if (!_settings.accelDetector) return;
