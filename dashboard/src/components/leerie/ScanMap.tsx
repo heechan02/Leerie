@@ -14,9 +14,8 @@ import { plan as runPlan, type Box } from "@/lib/leerie/planner";
 import { HoverCard } from "./HoverCard";
 import { Legend } from "./Legend";
 import { PlanPanel, type PlanInputs } from "./PlanPanel";
-import { DEFAULT_WEIGHTS, score, type Weights } from "./score";
+import { LIGHT_ONLY_WEIGHTS, score } from "./score";
 import type { SegmentProps as Props } from "./types";
-import { WeightSliders } from "./WeightSliders";
 
 if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
@@ -58,7 +57,7 @@ const boxPolygon = ([w, s, e, n]: Box): GeoJSON.Feature<GeoJSON.Polygon> => ({
 export function ScanMap() {
   const [loaded, setLoaded] = useState<{ data: Segments; source: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
+  const weights = LIGHT_ONLY_WEIGHTS;
   const [hover, setHover] = useState<Hover | null>(null);
   const mapRef = useRef<MapRef>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -231,7 +230,7 @@ export function ScanMap() {
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
         <Legend mode={mode} layer={layer} />
-        {hover && <HoverCard {...hover} weights={weights} />}
+        {hover && <HoverCard {...hover} />}
         {!loaded && (
           <div className="lr-card lr-glass lr-status" role={error ? "alert" : "status"}>
             {error ? (
@@ -268,7 +267,7 @@ export function ScanMap() {
 
         <p className="lr-panel-intro">
           {mode === "map"
-            ? "Each street is coloured by how much light reaches the pavement at night. Hover one to see why it scored that way."
+            ? "Each street is coloured only by how much light reaches the pavement at night. Hover for the light reading and reports."
             : "Draw a box over the area you are responsible for, then enter your budget."}
         </p>
 
@@ -299,7 +298,7 @@ export function ScanMap() {
           </p>
         </section>
 
-        <WeightSliders weights={weights} onChange={setWeights} />
+        <p className="lr-panel-intro">Street colours use 100% relative light. Reports remain visible as separate markers.</p>
 
         <footer style={{ display: "grid", gap: "var(--s2)" }}>
           {isFake && <p className="lr-warn" role="status">Placeholder data in use: these are not real readings.</p>}

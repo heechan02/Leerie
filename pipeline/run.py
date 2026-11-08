@@ -19,7 +19,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 MAX_ACCURACY_M = 15
-MAX_SPEED_MPS = 5  # brief says 3; relaxed because session 5113f195 walked at a GPS speed of ~4 m/s
 MATCH_M = 15
 NEIGHBOUR_M = 150
 MIN_ROWS = 3
@@ -114,7 +113,7 @@ def main() -> None:
     # The shared windows select readings and reports before quality checks and aggregation.
     clean = []
     for r in readings:
-        if (r["brightness"] or 0) <= 0 or (r["gps_accuracy_m"] or 99) > MAX_ACCURACY_M or (r["speed_mps"] or 0) > MAX_SPEED_MPS:
+        if (r["brightness"] or 0) <= 0 or (r["gps_accuracy_m"] or 99) > MAX_ACCURACY_M:
             continue
         clean.append((xy(*point(r["location"])), r["session_id"], math.log2(r["brightness"])))
 
@@ -194,8 +193,8 @@ def main() -> None:
         confirmed = int(len({s for s in sessions if s}) >= 2)
         passes = measured[i][4] if i in measured else 0
         R = (len(sessions) + 1) / (passes + 10)
-        score = None if i not in L else round(100 * (0.5 * L[i] + 0.3 * (1 - R) + 0.2 * 0.5), 1)
-        score_lo = None if i not in L_lo else round(100 * (0.5 * L_lo[i] + 0.3 * (1 - R) + 0.2 * 0.5), 1)
+        score = None if i not in L else round(100 * L[i], 1)
+        score_lo = None if i not in L_lo else round(100 * L_lo[i], 1)
         length = lengths[i]
         nearest_lamp, near_lamps = lamps[i]
         r2 = lambda v: None if v is None else round(v, 2)  # noqa: E731

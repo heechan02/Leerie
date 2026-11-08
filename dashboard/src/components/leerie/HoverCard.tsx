@@ -1,5 +1,5 @@
 // The hovered street's breakdown, floating beside the cursor on the map.
-import { score, type Weights } from "./score";
+import { score, LIGHT_ONLY_WEIGHTS } from "./score";
 import type { SegmentProps } from "./types";
 
 const CARD_W = 320;
@@ -8,19 +8,14 @@ const GAP = 16;
 
 const stops = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}`);
 
-type Props = { street: SegmentProps; weights: Weights; x: number; y: number; width: number; height: number };
+type Props = { street: SegmentProps; x: number; y: number; width: number; height: number };
 
-export function HoverCard({ street, weights, x, y, width, height }: Props) {
-  const s = score(street, weights);
-  const total = weights.L + weights.R + weights.C || 1;
+export function HoverCard({ street, x, y, width, height }: Props) {
+  const s = score(street, LIGHT_ONLY_WEIGHTS);
   // Flip to the left of the cursor near the right edge; clamp vertically.
   const left = x + GAP + CARD_W > width ? Math.max(8, x - GAP - CARD_W) : x + GAP;
   const top = Math.min(Math.max(8, y - CARD_H / 2), Math.max(8, height - CARD_H - 8));
-  const bars = [
-    { key: "L", label: "Light", value: street.L, weight: weights.L, light: true },
-    { key: "R", label: "Few reports (1 − R)", value: 1 - street.R, weight: weights.R },
-    { key: "C", label: street.C == null ? "Area crime unknown" : "Low area crime (1 − C)", value: 1 - (street.C ?? 0.5), weight: weights.C },
-  ];
+
 
   return (
     <div className="lr-card lr-glass lr-hover" style={{ left, top }}>
@@ -31,7 +26,7 @@ export function HoverCard({ street, weights, x, y, width, height }: Props) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div className="data lr-score">{s == null ? "—" : s.toFixed(0)}</div>
-          <div className="micro secondary">score / 100</div>
+          <div className="micro secondary">light / 100</div>
         </div>
       </div>
 
@@ -45,16 +40,15 @@ export function HoverCard({ street, weights, x, y, width, height }: Props) {
       </div>
 
       <div className="lr-bars">
-        {bars.map((b) => (
-          <div key={b.key} className="lr-bar-row">
-            <span>{b.label}</span>
-            <span className="data secondary">{b.value == null ? "unknown" : b.value.toFixed(2)} × {(b.weight / total).toFixed(2)}</span>
-            <div className={`lr-bar${b.light ? " lr-bar-light" : ""}`}>
-              <span style={{ width: `${(b.value ?? 0) * 100}%` }} />
-            </div>
-          </div>
-        ))}
+        <div className="lr-bar-row">
+          <span>Relative light percentile</span>
+          <span className="data secondary">{s == null ? "unknown" : `${s.toFixed(0)} / 100`}</span>
+          <div className="lr-bar lr-bar-light"><span style={{ width: `${s ?? 0}%` }} /></div>
+        </div>
       </div>
+      <p className="lr-line">Reports <span className="data">{(street.reports_possible ?? 0) + (street.reports_confirmed ?? 0)}</span>
+        <span className="secondary"> · <span className="data">{street.reports_confirmed ?? 0}</span> confirmed hotspots</span>
+      </p>
 
       <p className="lr-line">
         Light <span className="data">{stops(street.brightness_stops)}</span> stops

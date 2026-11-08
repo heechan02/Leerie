@@ -6,7 +6,7 @@ export function Legend({ mode, layer }: { mode: "map" | "plan"; layer: "light" |
     <div className="lr-card lr-glass lr-legend" aria-label="Map legend">
       {layer === "light" ? (
         <>
-          <div className="micro secondary">Score</div>
+          <div className="micro secondary">Light score</div>
           <div className="lr-ramp" style={{ background: `linear-gradient(90deg, ${NIGHT.ramp.map(([at, c]) => `${c} ${at}%`).join(", ")})` }} />
           <div className="lr-ticks data"><span>0 darker</span><span>50</span><span>100 lighter</span></div>
           <div className="lr-key"><i style={{ background: NIGHT.ramp[3][1] }} /> Measured</div>

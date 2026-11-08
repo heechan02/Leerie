@@ -4,7 +4,6 @@ Reads Supabase with the server key. The gitignored snapshot contains filtered
 travel paths, never incident locations, device labels, credentials or session IDs.
 """
 import json
-import math
 import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -23,7 +22,7 @@ def export(day, raw=False):
         if window is None or (not raw and not start <= t < end):
             continue
         total += 1
-        if not raw and (r['gps_accuracy_m'] is None or r['gps_accuracy_m'] > 20 or (r['speed_mps'] or 0) > 5):
+        if not raw and (r['gps_accuracy_m'] is None or r['gps_accuracy_m'] > 20):
             continue
         lng, lat = point(r['location'])
         if not raw and not (-3.4 < lng < -3 and 55.8 < lat < 56.1):
@@ -42,10 +41,9 @@ def export(day, raw=False):
             if path:
                 prev = path[-1]
                 dt = row[0] - prev[0]
-                distance = math.hypot((row[1]-prev[1])*62400, (row[2]-prev[2])*111320)
                 if dt <= 0:
                     continue
-                if dt > 90 or distance / dt > 6:
+                if dt > 90:
                     if len(path) > 1:
                         paths.append(path)
                     path = []
@@ -59,7 +57,7 @@ def export(day, raw=False):
         raise SystemExit('No usable night paths; existing snapshot preserved.')
     result = dict(date=day, start=min(p[0][0] for p in paths), end=max(p[-1][0] for p in paths),
                   readings=total, sessions=len({key[0] for key in groups}), paths=paths, unfiltered=raw, selection=SELECTION,
-                  note='Every light reading within the three selected GMT windows, at its original timestamp and coordinates. No GPS quality, speed, geographic, downsampling, gap or jump filters. Sessions and selected windows remain separate.' if raw else 'Selected GMT windows only. GPS accuracy ≤20 m; walking speed ≤5 m/s. Samples spaced ≥10 s. Gaps over 90 s and implausible jumps split the trails.')
+                  note='Every light reading within the three selected GMT windows, at its original timestamp and coordinates. No GPS quality, speed, geographic, downsampling, gap or jump filters. Sessions and selected windows remain separate.' if raw else 'Selected GMT windows only. GPS accuracy ≤20 m; no speed limit. Samples spaced ≥10 s. Gaps over 90 s split the trails.')
     target = ROOT / ('.env.replay.raw.json' if raw else '.env.replay.json')
     tmp = target.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result, separators=(',', ':')))
