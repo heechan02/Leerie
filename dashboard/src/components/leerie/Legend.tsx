@@ -7,10 +7,10 @@ export function Legend({ mode, layer }: { mode: "map" | "plan"; layer: "light" |
       {layer === "light" ? (
         <>
           <div className="micro secondary">Score</div>
-          <div className="lr-ramp" style={{ background: `linear-gradient(90deg, ${NIGHT.dim}, ${NIGHT.mid}, ${NIGHT.lit})` }} />
+          <div className="lr-ramp" style={{ background: `linear-gradient(90deg, ${NIGHT.ramp.map(([at, c]) => `${c} ${at}%`).join(", ")})` }} />
           <div className="lr-ticks data"><span>0 darker</span><span>50</span><span>100 lighter</span></div>
-          <div className="lr-key"><i /> Measured</div>
-          <div className="lr-key"><i style={{ opacity: 0.4, height: 3 }} /> Predicted</div>
+          <div className="lr-key"><i style={{ background: NIGHT.ramp[3][1] }} /> Measured</div>
+          <div className="lr-key"><i style={{ background: NIGHT.ramp[3][1], opacity: 0.4, height: 3 }} /> Predicted</div>
         </>
       ) : (
         <div className="lr-key"><b className="lr-lampdot" aria-hidden /> Council lamp post</div>

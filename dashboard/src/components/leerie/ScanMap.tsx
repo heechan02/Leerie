@@ -177,7 +177,7 @@ export function ScanMap() {
                 layout={{ "line-cap": "round", "line-join": "round", visibility: layer === "light" ? "visible" : "none" }}
                 paint={{
                   "line-color": ["case", ["==", ["get", "_score"], null], NIGHT.dim,
-                    ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit]],
+                    ["interpolate", ["linear"], ["get", "_score"], ...NIGHT.ramp.flat()]],
                   // Measured solid, predicted faded, no estimate barely there.
                   "line-opacity": ["case", ["get", "measured"], 1, ["==", ["get", "_score"], null], 0.25, 0.4],
                   "line-width": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "measured"], 2.5, 1], 17, ["case", ["get", "measured"], 8, 3]],
