@@ -12,3 +12,9 @@ describe("score", () => {
     expect(score({ L: 0, R: 1, C: null }, { L: 0, R: 0, C: 1 })).toBe(50);
   });
 });
+
+describe("unknown light", () => {
+  it("gives no score rather than 0", () => {
+    expect(score({ L: null, R: 0.1, C: 0.2 }, DEFAULT_WEIGHTS)).toBeNull();
+  });
+});

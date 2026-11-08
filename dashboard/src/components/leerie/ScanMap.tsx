@@ -15,7 +15,7 @@ type Props = {
   segment_id: string; name: string | null; highway: string; measured: boolean;
   n_readings: number; passes: number; length_m: number;
   brightness_stops: number | null; brightness_lo: number | null; brightness_hi: number | null;
-  L: number; R: number; C: number | null; score: number; inspect?: boolean; forecast?: boolean;
+  L: number | null; R: number; C: number | null; score: number | null; inspect?: boolean; forecast?: boolean;
   lamps_per_100m?: number | null;
 };
 type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props>;
@@ -61,7 +61,7 @@ export function ScanMap() {
     const measured = fs.filter((f) => f.properties.measured);
     return {
       measured: measured.length,
-      predicted: fs.length - measured.length,
+      predicted: fs.filter((f) => !f.properties.measured && f.properties.L != null).length,
       km: measured.reduce((s, f) => s + (f.properties.length_m ?? 0), 0) / 1000,
     };
   }, [loaded]);
@@ -93,8 +93,10 @@ export function ScanMap() {
                 type="line"
                 layout={{ "line-cap": "round", "line-join": "round" }}
                 paint={{
-                  "line-color": ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit],
-                  "line-opacity": ["case", ["get", "measured"], 1, 0.35],
+                  "line-color": ["case", ["==", ["get", "_score"], null], NIGHT.dim,
+                    ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit]],
+                  // Measured solid, predicted faded, no estimate barely there.
+                  "line-opacity": ["case", ["get", "measured"], 1, ["==", ["get", "_score"], null], 0.25, 0.4],
                   "line-width": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "measured"], 2, 1], 17, ["case", ["get", "measured"], 7, 3]],
                 }}
               />
@@ -134,12 +136,12 @@ export function ScanMap() {
           {hover ? (
             <dl className="data" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "var(--s1) var(--s3)", margin: "var(--s2) 0 0", fontSize: "var(--t-small)" }}>
               <dt>Street</dt><dd style={{ margin: 0 }}>{hover.name ?? "unnamed"} · {hover.highway}</dd>
-              <dt>Status</dt><dd style={{ margin: 0 }}>{hover.measured ? `measured, ${hover.passes} passes, ${hover.n_readings} readings` : "predicted"}</dd>
+              <dt>Status</dt><dd style={{ margin: 0 }}>{hover.measured ? `measured, ${hover.passes} passes, ${hover.n_readings} readings` : hover.L == null ? "not walked, no estimate yet" : "predicted from measured neighbours"}</dd>
               <dt>Light</dt><dd style={{ margin: 0 }}>{stops(hover.brightness_stops)} stops ({stops(hover.brightness_lo)} to {stops(hover.brightness_hi)}, 80%)</dd>
-              <dt>L light</dt><dd style={{ margin: 0 }}>{hover.L.toFixed(2)} × {weights.L.toFixed(2)}</dd>
+              <dt>L light</dt><dd style={{ margin: 0 }}>{hover.L == null ? "unknown" : `${hover.L.toFixed(2)} × ${weights.L.toFixed(2)}`}</dd>
               <dt>R reports</dt><dd style={{ margin: 0 }}>{hover.R.toFixed(2)} → (1 − R) × {weights.R.toFixed(2)}</dd>
               <dt>C area crime</dt><dd style={{ margin: 0 }}>{hover.C == null ? "unknown" : hover.C.toFixed(2)} → (1 − C) × {weights.C.toFixed(2)}</dd>
-              <dt>Score</dt><dd style={{ margin: 0, fontWeight: 600 }}>{hoverScore!.toFixed(0)} / 100</dd>
+              <dt>Score</dt><dd style={{ margin: 0, fontWeight: 600 }}>{hoverScore == null ? "no estimate" : `${hoverScore.toFixed(0)} / 100`}</dd>
               {hover.inspect && (<><dt>Flag</dt><dd style={{ margin: 0 }}>lamped but darker than expected</dd></>)}
             </dl>
           ) : (
