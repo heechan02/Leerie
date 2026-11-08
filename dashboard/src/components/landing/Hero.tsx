@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { loadNumbers, type Numbers } from "./numbers";
 
-// shortcut: placeholder lamp photo (700 px, so a gentle zoom); swap in the Higgsfield scene, set FOCUS to the woman and ZOOM to ~1.2.
-const HERO = { src: "/hero.webp", focus: "34% 28%", zoom: 0.45 };
+// The zoom closes in on her. The source is 1696 px wide, so the zoom stays gentle to stay sharp.
+const HERO = { src: "/hero.webp", focus: "76% 74%", zoom: 0.7 };
 /** Where each line is visible, as a share of the hero's scroll. */
 const BEATS: [number, number][] = [[-1, 0.3], [0.34, 0.64], [0.68, 2]];
 const FADE = 0.08;

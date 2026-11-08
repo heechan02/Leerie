@@ -24,6 +24,16 @@ const STEPS = [
   { n: "03", title: "Decide", text: "A council officer draws a box and types a budget and a cost per lamp. Leerie picks the streets that gain most per pound, writes a works order for contractors, lists where one more walk would change the plan, and flags streets that have lamps but still measure dark." },
 ];
 
+/** The council's lamp map beside our light map, same view each time. Images: /map with one layer on. */
+const COMPARE = [
+  { key: "area", title: "George Square to King's Buildings",
+    lamps: "Lamp posts are spread evenly. On this map every street looks lit.",
+    light: "Measured light varies a lot from street to street. Amber is bright, violet is dark, faded is predicted." },
+  { key: "street", title: "Around Findhorn Place",
+    lamps: "Lamps line both sides, as many as on a typical street we walked.",
+    light: "Findhorn Place still measures 2.3 stops darker than the streets around it, about a fifth of the light." },
+];
+
 const PRIVACY = [
   ["No photos", "Frames are reduced to one brightness number on the phone and thrown away."],
   ["No accounts", "Each walk gets a random ID. There is no name, email or phone number."],
@@ -39,6 +49,7 @@ export function Landing() {
         <div className="ld-nav-links">
           <a href="#why">Why</a>
           <a href="#how">How it works</a>
+          <a href="#compare">Lamps vs light</a>
           <a href="#night">Last night</a>
           <Link className="lr-button" href="/map">Open the map</Link>
         </div>
@@ -88,6 +99,28 @@ export function Landing() {
           </ol>
         </section>
 
+        <section id="compare" className="ld-section">
+          <p className="micro ld-eyebrow">The lamp map vs the light map</p>
+          <h2 className="display ld-h2">A lamp on a map is not light on the pavement.</h2>
+          {COMPARE.map((c) => (
+            <div key={c.key} className="ld-compare">
+              <h3 className="display">{c.title}</h3>
+              <div className="ld-compare-pair">
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static screenshots, already sized */}
+                  <img src={`/compare/${c.key}-lamps.webp`} alt={`Council lamp posts, ${c.title}`} loading="lazy" />
+                  <figcaption><b>What the council&apos;s map shows</b>{c.lamps}</figcaption>
+                </figure>
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static screenshots, already sized */}
+                  <img src={`/compare/${c.key}-light.webp`} alt={`Measured light by street, ${c.title}`} loading="lazy" />
+                  <figcaption><b>What we measured</b>{c.light}</figcaption>
+                </figure>
+              </div>
+            </div>
+          ))}
+        </section>
+
         <section id="night" className="ld-section">
           <p className="micro ld-eyebrow">Last night · 7 to 8 November 2026</p>
           <h2 className="display ld-h2">One night between George Square and King&apos;s Buildings.</h2>
@@ -129,7 +162,7 @@ export function Landing() {
           <a href="https://github.com/heechan02/Leerie" target="_blank" rel="noreferrer">Source on GitHub</a>
         </p>
         <p>
-          Street data © OpenStreetMap contributors · Lamp posts: City of Edinburgh Council · Photo: Marco Trassini on Unsplash
+          Street data © OpenStreetMap contributors · Lamp posts: City of Edinburgh Council · Opening image generated with Higgsfield
         </p>
       </footer>
     </div>

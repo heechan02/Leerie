@@ -23,14 +23,14 @@
   object-fit: cover; object-position: var(--focus);
   transform-origin: var(--focus);
   transform: scale(calc(1.06 + var(--p) * var(--zoom)));
-  filter: saturate(1.05) brightness(calc(0.92 - var(--p) * 0.25));
+  filter: brightness(calc(1 - var(--p) * 0.12));
   will-change: transform;
 }
 .ld-shade {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(120% 90% at var(--focus), transparent 30%, rgb(11 13 26 / 0.65) 100%),
-    linear-gradient(180deg, rgb(11 13 26 / 0.35) 0%, transparent 30%, transparent 55%, var(--night) 100%);
+    linear-gradient(90deg, rgb(11 13 26 / 0.55) 0%, rgb(11 13 26 / 0.2) 45%, transparent 65%),
+    linear-gradient(180deg, rgb(11 13 26 / 0.3) 0%, transparent 25%, transparent 70%, var(--night) 100%);
 }
 .ld-fog {
   position: absolute; inset: -10% -30%; pointer-events: none; mix-blend-mode: screen;
@@ -133,3 +133,13 @@
   .ld-hero-img { transform: none; filter: brightness(0.7); }
   .ld-beat, .ld-beat-1, .ld-beat-2 { position: relative; left: auto; bottom: auto; padding: 0 clamp(16px, 6vw, 96px); opacity: 1; visibility: visible; transform: none; }
 }
+
+/* Lamp map vs light map */
+.ld-compare + .ld-compare { margin-top: var(--s7); }
+.ld-compare h3 { font-size: 26px; margin-bottom: var(--s4); }
+.ld-compare-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+.ld-compare-pair figure { margin: 0; }
+.ld-compare-pair img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--night); }
+.ld-compare-pair figcaption { margin-top: var(--s3); color: var(--ink-2); font-size: var(--t-small); }
+.ld-compare-pair figcaption b { display: block; color: var(--ink); font-size: var(--t-body); margin-bottom: 2px; }
+@media (max-width: 720px) { .ld-compare-pair { grid-template-columns: 1fr; } }

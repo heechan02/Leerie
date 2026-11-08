@@ -66,6 +66,7 @@ export function ScanMap() {
   const drawFrom = useRef<[number, number] | null>(null);
   const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
   const [showLamps, setShowLamps] = useState(true);
+  const [showLight, setShowLight] = useState(true);
 
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   useEffect(() => {
@@ -116,7 +117,8 @@ export function ScanMap() {
   const fitted = useRef(false);
   useEffect(() => {
     const map = mapRef.current;
-    if (!loaded || !mapReady || !map || fitted.current) return;
+    // A #zoom/lat/lng link (the map's `hash`) opens exactly there instead.
+    if (!loaded || !mapReady || !map || fitted.current || window.location.hash) return;
     const fs = loaded.data.features;
     const focus = fs.filter((f) => f.properties.measured);
     const pts = (focus.length ? focus : fs.filter((f) => f.properties.L != null)).flatMap((f) => f.geometry.coordinates);
@@ -153,6 +155,7 @@ export function ScanMap() {
         <Map
           ref={mapRef}
           onLoad={() => setMapReady(true)}
+          hash
           initialViewState={{ longitude: CENTER[0], latitude: CENTER[1], zoom: 14.3 }}
           mapStyle={style}
           style={{ position: "absolute", inset: 0 }}
@@ -171,7 +174,7 @@ export function ScanMap() {
               <Layer
                 id="segments-line"
                 type="line"
-                layout={{ "line-cap": "round", "line-join": "round" }}
+                layout={{ "line-cap": "round", "line-join": "round", visibility: showLight ? "visible" : "none" }}
                 paint={{
                   "line-color": ["case", ["==", ["get", "_score"], null], NIGHT.dim,
                     ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit]],
@@ -193,12 +196,12 @@ export function ScanMap() {
           )}
           {/* Council lamp columns: MapLibre fetches the file itself, only drawn when zoomed in. */}
           <Source id="lamps" type="geojson" data="/data/lamps.geojson">
-            <Layer id="lamps-glow" type="circle" minzoom={14} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+            <Layer id="lamps-glow" type="circle" minzoom={13} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
               "circle-color": NIGHT.lamp, "circle-blur": 1, "circle-opacity": 0.35,
-              "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 4, 18, 14],
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 18, 14],
             }} />
-            <Layer id="lamps-dot" type="circle" minzoom={14} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
-              "circle-color": NIGHT.lit, "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 1, 18, 3],
+            <Layer id="lamps-dot" type="circle" minzoom={13} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+              "circle-color": NIGHT.lit, "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 1, 18, 3],
             }} />
           </Source>
           {hotspots && (
@@ -276,8 +279,12 @@ export function ScanMap() {
 
         <section aria-labelledby="layers-h">
           <h2 id="layers-h" className="micro">Layers</h2>
+          <label className="lr-toggle" style={{ marginBottom: "var(--s3)" }}>
+            <span>Measured light<small>Our readings, street by street</small></span>
+            <input type="checkbox" checked={showLight} onChange={(e) => setShowLight(e.target.checked)} />
+          </label>
           <label className="lr-toggle">
-            <span>Council lamp posts<small>City of Edinburgh Council lighting columns, zoom in to see them</small></span>
+            <span>Council lamp posts<small>City of Edinburgh Council lighting columns</small></span>
             <input type="checkbox" checked={showLamps} onChange={(e) => setShowLamps(e.target.checked)} />
           </label>
         </section>
