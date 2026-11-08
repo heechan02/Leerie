@@ -1,22 +1,22 @@
-# CLAUDE.md: Night-light safety map (Leerie)
+# CLAUDE.md: Leerie
 
 ## Start here
-- The plan is `Night-light safety map team brief.md`. Read all of it first. If this file and the brief disagree, the brief wins.
-- Your human will say which workstream they own (1-4):
-  1 = Phone app, 2 = Scanning and database, 3 = Processing, model and routing, 4 = Dashboard and pitch.
-  Work only inside that workstream's folder (below) unless asked.
-- Deadline: we submit at 11:30 (submissions close at 12:00). At 07:00 the team decides go or no-go.
-  If it's no-go, we submit PoliScope (`../poliscope`, pitch in `../poliscope/docs/pitch.md`).
+- The plan is `docs/brief-v2.md`. Read all of it first. If this file and the brief disagree, the brief wins.
+- Your human will say whether they are **Dev A** (sensor and map: `sensor/`, dashboard app and components)
+  or **Dev B** (signal and decisions: `pipeline/`, `data/`, `dashboard/src/lib/leerie/`).
+  Work only inside your own folders unless asked. The two meet only at the data contract.
+- Deadline: we submit at 11:30 (submissions close at 12:00). Gates: 04:45 iOS gate and forecast freeze,
+  07:00 go/no-go (no-go = submit PoliScope, `../poliscope/docs/pitch.md`), 09:30 feature freeze.
 - Run `date` at every step. From 09:30, fix bugs only.
 
 ## Layout
-| Folder | Workstream | Origin |
+| Folder | Owner | What |
 | --- | --- | --- |
-| `sensor/` | 1. Flutter iOS app | Leerie `sensor/` (github.com/heechan02/Leerie) |
-| `supabase/` | 2. Supabase SQL: tables, RLS, hotspot trigger | Leerie `supabase/`, adapted |
-| `pipeline/` | 3. Python: clean, match, predict, score, routing service | new |
-| `dashboard/` | 4. Next.js + MapLibre: scan map, routes, budget planner | Leerie dashboard |
-| `data/` | Shared files between workstreams (see contract) | |
+| `sensor/` | A | Flutter scanner, Android and iOS |
+| `supabase/` | done | Tables, insert-only RLS |
+| `pipeline/` | B | `run.py` (pull → export), `validate.py` |
+| `data/` | B | `segments.geojson`, `validation.json`, `forecast_frozen.csv`, `sessions.csv` |
+| `dashboard/` | A (app, components), B (`src/lib/leerie/`: `route.ts`, `planner.ts`) | Next.js 16 + MapLibre, reads only `data/` files |
 
 ## Android scanner MVP (working now)
 - `sensor/` records exposure-corrected camera luminance (phyphox's method, `lib/detect/luminance.dart`)
@@ -28,7 +28,7 @@
 - Build and install on a USB-connected phone, from `sensor/`:
   `flutter run --release --dart-define=SUPABASE_URL=https://<ref>.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon>`
   (or set the URL and key in the app's Settings → Supabase).
-- Not built yet: the Report button, iOS. Leerie's clustering trigger to adapt for hotspots is in its repo,
+- Comfortable/Uncomfortable buttons write to `incidents`. Not built yet: iOS (see the brief's checklist). Leerie's clustering trigger to adapt for hotspots is in its repo,
   `supabase/migrations/20260901000000_init.sql` (`detections_cluster`).
 
 ## Starting code
@@ -42,7 +42,9 @@
 
 ## The one shared contract
 Everything downstream reads `data/segments.geojson`, one feature per OSM street segment.
-Workstream 3 writes it. Until the real one exists, workstreams 3 and 4 build against a fake one at `data/segments.fake.geojson`.
+Dev B writes it. Until the real one exists, both build against `data/segments.fake.geojson`.
+The keys below plus the additions in the brief's "Data contract" section (`u`, `v`, `length_m`,
+`brightness_stops`, `brightness_lo/hi`, `expected_stops`, lamp keys, `inspect`, `usage`, `score_lo`, `forecast`).
 Properties (snake_case; unknown values are `null`, never 0):
 
 | Key | Type | Meaning |
@@ -72,4 +74,4 @@ Change this contract only with the whole team's agreement.
 ## Code style
 - Python 3.11, pandas, osmnx, networkx, scikit-learn; `ruff format`.
 - Flutter/Dart as Leerie has it. Next.js App Router, TypeScript strict, MapLibre.
-- Commit messages: `[<workstream number>] what changed`. Pull before every step, then push to main.
+- Commit messages: `[A]` or `[B]` + what changed. Pull before every step, then push to main.
