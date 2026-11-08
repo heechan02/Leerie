@@ -60,7 +60,7 @@ export function HoverCard({ street, weights, x, y, width, height }: Props) {
         Light <span className="data">{stops(street.brightness_stops)}</span> stops
         <span className="secondary"> (80%: <span className="data">{stops(street.brightness_lo)} to {stops(street.brightness_hi)}</span>)</span>
       </p>
-      <p className="lr-line secondary" style={{ fontSize: "var(--t-micro)" }}>Relative to the median street, not lux. +1 = twice as bright.</p>
+      <p className="lr-line secondary" style={{ fontSize: "var(--t-micro)" }}>vs median street · +1 = 2× light</p>
     </div>
   );
 }

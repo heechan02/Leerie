@@ -1,14 +1,17 @@
 "use client";
 // The scan map: every street segment from data/segments.geojson, coloured by score,
 // measured streets solid and predicted ones faded. Hover a street for its breakdown.
+// Plan mode: drag a box, enter budget and costs, and the planner picks the streets to light.
 import { useEffect, useMemo, useRef, useState } from "react";
-import Map, { Layer, Source, ScaleControl, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
+import Map, { Layer, NavigationControl, Source, ScaleControl, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { buildMapStyle } from "@/lib/map/style";
 import { NIGHT } from "@/lib/map/tokens";
+import { plan as runPlan, type Box } from "@/lib/leerie/planner";
 import { HoverCard } from "./HoverCard";
 import { Legend } from "./Legend";
+import { PlanPanel, type PlanInputs } from "./PlanPanel";
 import { DEFAULT_WEIGHTS, score, type Weights } from "./score";
 import type { SegmentProps as Props } from "./types";
 import { WeightSliders } from "./WeightSliders";
@@ -29,6 +32,11 @@ async function loadSegments(): Promise<{ data: Segments; source: string }> {
 }
 
 type Hover = { street: Props; x: number; y: number; width: number; height: number };
+type Mode = "map" | "plan";
+const PICKED = "#7fd4ff"; // streets to light: not on the score ramp, so they stand out from it
+const boxPolygon = ([w, s, e, n]: Box): GeoJSON.Feature<GeoJSON.Polygon> => ({
+  type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] },
+});
 
 export function ScanMap() {
   const [loaded, setLoaded] = useState<{ data: Segments; source: string } | null>(null);
@@ -37,22 +45,35 @@ export function ScanMap() {
   const [hover, setHover] = useState<Hover | null>(null);
   const mapRef = useRef<MapRef>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mode, setMode] = useState<Mode>("map");
+  const [box, setBox] = useState<Box | null>(null);
+  const drawFrom = useRef<[number, number] | null>(null);
+  const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
 
   useEffect(() => {
     loadSegments().then(setLoaded, (e: Error) => setError(e.message));
   }, []);
 
+  const plan = useMemo(() => {
+    const [budget, costPerLight, spacingM] = [inputs.budget, inputs.costPerLight, inputs.spacingM].map(Number);
+    if (mode !== "plan" || !loaded || !box || !(budget > 0 && costPerLight > 0 && spacingM > 0)) return null;
+    return runPlan(loaded.data.features, box, { budget, costPerLight, spacingM, weights });
+  }, [mode, loaded, box, inputs, weights]);
+
   // Recompute every score with the current weights; MapLibre colours by `_score`.
   const data = useMemo<Segments | null>(() => {
     if (!loaded) return null;
+    const picked = new Set(plan?.picks.map((p) => p.segment_id));
+    const scan = new Set(plan?.scanNext.map((p) => p.segment_id));
     return {
       ...loaded.data,
       features: loaded.data.features.map((f) => ({
         ...f,
-        properties: { ...f.properties, _score: score(f.properties, weights) },
+        properties: { ...f.properties, _score: score(f.properties, weights),
+          _picked: picked.has(f.properties.segment_id), _scan: scan.has(f.properties.segment_id) },
       })),
     };
-  }, [loaded, weights]);
+  }, [loaded, weights, plan]);
 
   const style = useMemo(() => buildMapStyle({ ...NIGHT, action: NIGHT.lit, committed: NIGHT.lit }), []);
   const counts = useMemo(() => {
@@ -79,7 +100,21 @@ export function ScanMap() {
     fitted.current = true;
   }, [loaded, mapReady]);
 
+  // Plan mode: press, drag and release on the map to draw the area.
+  const onDown = (e: MapLayerMouseEvent) => {
+    if (mode !== "plan") return;
+    drawFrom.current = [e.lngLat.lng, e.lngLat.lat];
+    setBox(null);
+  };
+  const onDrag = (e: MapLayerMouseEvent) => {
+    const from = drawFrom.current;
+    if (!from) return;
+    if (e.originalEvent.buttons === 0) { drawFrom.current = null; return; } // released outside the map
+    const [x, y] = [e.lngLat.lng, e.lngLat.lat];
+    setBox([Math.min(from[0], x), Math.min(from[1], y), Math.max(from[0], x), Math.max(from[1], y)]);
+  };
   const onHover = (e: MapLayerMouseEvent) => {
+    if (drawFrom.current) return onDrag(e);
     const f = e.features?.[0];
     const box = e.target.getContainer();
     setHover(f ? { street: f.properties as Props, x: e.point.x, y: e.point.y, width: box.clientWidth, height: box.clientHeight } : null);
@@ -96,11 +131,14 @@ export function ScanMap() {
           mapStyle={style}
           style={{ position: "absolute", inset: 0 }}
           dragRotate={false}
+          dragPan={mode === "map"}
           interactiveLayerIds={["segments-hit"]}
+          onMouseDown={onDown}
+          onMouseUp={() => { drawFrom.current = null; }}
           onMouseMove={onHover}
           onClick={onHover}
           onMouseLeave={() => setHover(null)}
-          cursor={hover ? "pointer" : "grab"}
+          cursor={mode === "plan" ? "crosshair" : hover ? "pointer" : "grab"}
         >
           {data && (
             <Source id="segments" type="geojson" data={data}>
@@ -119,8 +157,19 @@ export function ScanMap() {
               {/* Wide invisible line so thin streets are easy to hover. */}
               {/* Opacity 0.01, not 0: MapLibre skips fully transparent layers when querying. */}
               <Layer id="segments-hit" type="line" paint={{ "line-width": 12, "line-opacity": 0.01 }} />
+              <Layer id="segments-scan" type="line" filter={["==", ["get", "_scan"], true]}
+                paint={{ "line-color": PICKED, "line-width": 4, "line-dasharray": [1, 1.5] }} />
+              <Layer id="segments-picked" type="line" filter={["==", ["get", "_picked"], true]}
+                layout={{ "line-cap": "round" }} paint={{ "line-color": PICKED, "line-width": 6 }} />
             </Source>
           )}
+          {mode === "plan" && box && (
+            <Source id="plan-box" type="geojson" data={boxPolygon(box)}>
+              <Layer id="plan-box-fill" type="fill" paint={{ "fill-color": PICKED, "fill-opacity": 0.06 }} />
+              <Layer id="plan-box-line" type="line" paint={{ "line-color": PICKED, "line-width": 1.5, "line-dasharray": [2, 2] }} />
+            </Source>
+          )}
+          <NavigationControl position="top-right" showZoom={false} visualizePitch={false} />
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
         <Legend />
@@ -145,11 +194,17 @@ export function ScanMap() {
             <span className="lr-lamp" aria-hidden />
             <h1 style={{ fontSize: "var(--t-title)", letterSpacing: "-0.01em" }}>Leerie</h1>
           </div>
-          <p className="lr-quote">
-            Every council knows where its lamps are. Nobody measures the light that reaches the pavement.
-          </p>
           <p className="micro secondary" style={{ marginTop: "var(--s2)" }}>Edinburgh · George Square to King&apos;s Buildings</p>
         </header>
+
+        <div className="lr-tabs" role="tablist" aria-label="View">
+          {(["map", "plan"] as const).map((m) => (
+            <button key={m} type="button" role="tab" aria-selected={mode === m} className="lr-tab"
+              onClick={() => { setMode(m); setHover(null); }}>
+              {m === "map" ? "Streets" : "Plan lighting"}
+            </button>
+          ))}
+        </div>
 
         <section className="lr-stats" aria-label="Coverage" aria-busy={!loaded}>
           <StatCard value={String(counts.measured)} label="streets measured" loading={!loaded} />
@@ -157,17 +212,16 @@ export function ScanMap() {
           <StatCard value={counts.km.toFixed(1)} label="km measured" loading={!loaded} />
         </section>
 
-        <WeightSliders weights={weights} onChange={setWeights} />
+        {mode === "plan" && (
+          <PlanPanel plan={plan} hasBox={box != null} inputs={inputs} onInputs={setInputs} onClearBox={() => setBox(null)} />
+        )}
 
-        <p className="secondary" style={{ fontSize: "var(--t-small)", margin: 0 }}>
-          Hover or tap a street to see why it scores what it does. Solid streets were walked; faded ones are predicted
-          from measured neighbours.
-        </p>
+        <WeightSliders weights={weights} onChange={setWeights} />
 
         <footer style={{ display: "grid", gap: "var(--s2)" }}>
           {isFake && <p className="lr-warn" role="status" style={{ margin: 0 }}>Placeholder data in use: these are not real readings.</p>}
           <p className="lr-source" style={{ margin: 0 }}>
-            Source: <span className="data">data/{loaded?.source ?? "…"}</span>. Light is relative to the median street, not lux.
+            <span className="data">data/{loaded?.source ?? "…"}</span> · relative light, not lux
           </p>
         </footer>
       </aside>

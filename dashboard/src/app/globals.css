@@ -281,7 +281,9 @@ button { font: inherit; color: inherit; }
 }
 .lr-quote { margin: var(--s3) 0 0; font-size: var(--t-small); color: var(--ink-2); line-height: 1.45; }
 
-.lr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+.lr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.lr-panel > * { min-width: 0; }
+.lr-plan .lr-stat-value { font-size: var(--t-lead); overflow-wrap: anywhere; }
 .lr-stat { background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-lg); padding: var(--s3); }
 .lr-stat-value { font-size: var(--t-metric); font-weight: 600; line-height: 1.1; }
 .lr-stat-label { font-size: var(--t-micro); color: var(--ink-2); margin-top: var(--s1); line-height: 1.3; }
@@ -347,3 +349,20 @@ button { font: inherit; color: inherit; }
   .lr-legend { width: 200px; }
   .lr-hover { width: 280px; }
 }
+
+/* Plan mode. */
+.lr-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); background: var(--canvas); border-radius: var(--r-lg); padding: var(--s1); }
+.lr-tab { background: none; border: 0; border-radius: var(--r-md); padding: var(--s2); color: var(--ink-2); font: inherit; font-size: var(--t-small); font-weight: 600; cursor: pointer; }
+.lr-tab[aria-selected="true"] { background: var(--rail); color: var(--ink); box-shadow: var(--shadow-2); }
+.lr-plan { display: grid; gap: var(--s3); }
+.lr-plan h2 { margin: var(--s2) 0 0; }
+.lr-hint { font-size: var(--t-small); margin: 0; }
+.lr-fields { display: grid; gap: var(--s2); }
+.lr-field { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: var(--s3); font-size: var(--t-small); }
+.lr-field input { background: var(--canvas); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--r-md); padding: var(--s2); font-size: var(--t-small); text-align: right; }
+.lr-list { margin: 0; padding-left: var(--s4); display: grid; gap: var(--s1); font-size: var(--t-small); }
+.lr-list li { display: flex; justify-content: space-between; gap: var(--s3); }
+.lr-button { background: var(--focus); color: var(--rail); border: 0; border-radius: var(--r-md); padding: var(--s3); font: inherit; font-size: var(--t-small); font-weight: 600; cursor: pointer; }
+.lr-button:disabled { opacity: 0.4; cursor: default; }
+.night .maplibregl-ctrl-group { background: var(--rail-2); }
+.night .maplibregl-ctrl-group .maplibregl-ctrl-icon { filter: invert(1); }

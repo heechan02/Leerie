@@ -6,10 +6,7 @@ const LABELS = { L: "Light", R: "Reports", C: "Area crime" } as const;
 export function WeightSliders({ weights, onChange }: { weights: Weights; onChange: (w: Weights) => void }) {
   return (
     <section aria-labelledby="weights-h">
-      <h2 id="weights-h" className="micro">Score weights</h2>
-      <p className="secondary" style={{ fontSize: "var(--t-small)", margin: "0 0 var(--s3)" }}>
-        Our choice, not a finding. Move them to see the map change.
-      </p>
+      <h2 id="weights-h" className="micro">Score weights · our choice</h2>
       <div className="lr-weights">
         {(["L", "R", "C"] as const).map((k) => (
           <label key={k} className="lr-weight">
@@ -21,7 +18,7 @@ export function WeightSliders({ weights, onChange }: { weights: Weights; onChang
           </label>
         ))}
         <button type="button" className="lr-link" onClick={() => onChange(DEFAULT_WEIGHTS)}>
-          Reset to 0.50 / 0.30 / 0.20
+          Reset
         </button>
       </div>
     </section>
