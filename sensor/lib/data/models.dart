@@ -103,33 +103,43 @@ class DetectionRecord {
   }
 }
 
-/// One row of `scanner_positions`. Posted in batches of about five seconds.
+/// One row of `light_readings`. Posted in batches of `breadcrumbBatchSeconds`.
 class Breadcrumb {
   const Breadcrumb({
     required this.recordedAt,
     required this.lat,
     required this.lng,
+    this.gpsAccuracyM,
     this.speedMps,
-    this.headingDeg,
+    this.brightness,
+    this.iso,
+    this.exposureS,
+    this.aperture,
   });
 
   final DateTime recordedAt;
   final double lat;
   final double lng;
+  final double? gpsAccuracyM;
   final double? speedMps;
-  final double? headingDeg;
 
-  Map<String, dynamic> toJson({
-    required String tripId,
-    required String scannerId,
-  }) {
+  /// Mean exposure-corrected luminance of the frames since the previous point.
+  final double? brightness;
+  final double? iso;
+  final double? exposureS;
+  final double? aperture;
+
+  Map<String, dynamic> toJson({required String sessionId}) {
     return <String, dynamic>{
-      'trip_id': tripId,
-      'scanner_id': scannerId,
+      'session_id': sessionId,
       'recorded_at': recordedAt.toUtc().toIso8601String(),
       'location': ewktPoint(lng, lat),
+      'gps_accuracy_m': gpsAccuracyM,
       'speed_mps': speedMps,
-      'heading_deg': headingDeg,
+      'brightness': brightness,
+      'iso': iso,
+      'exposure_s': exposureS,
+      'aperture': aperture,
     };
   }
 }

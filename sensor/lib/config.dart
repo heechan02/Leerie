@@ -33,7 +33,7 @@ const maxGpsAccuracyM = 20.0;
 const minSpeedMps = 2.0;
 const severityA = 2.0; // severity = clamp(peak_z / (a + b * speed), 0, 1)
 const severityB = 0.5;
-const breadcrumbBatchSeconds = 5;
+const breadcrumbBatchSeconds = 20;
 
 // ─── Beyond the original spec ────────────────────────────────────────────────
 

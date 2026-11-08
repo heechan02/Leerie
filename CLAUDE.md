@@ -18,18 +18,23 @@
 | `dashboard/` | 4. Next.js + MapLibre: scan map, routes, budget planner | Leerie dashboard |
 | `data/` | Shared files between workstreams (see contract) | |
 
+## Android scanner MVP (working now)
+- `sensor/` records exposure-corrected camera luminance (phyphox's method, `lib/detect/luminance.dart`)
+  averaged per GPS point (~1 Hz), and uploads to `light_readings` every 20 s with a random `session_id` per walk.
+- It uses the Camera2 backend (`camera_android`), because the default CameraX one gives no exposure, ISO or aperture.
+- The footer shows the live light value; "no exposure data from camera" means that phone can't be used.
+- Database: run `supabase/migrations/20261108000000_light_readings.sql` in the Supabase SQL editor.
+  It is insert-only for anon; read the data with the service key.
+- Build and install on a USB-connected phone, from `sensor/`:
+  `flutter run --release --dart-define=SUPABASE_URL=https://<ref>.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon>`
+  (or set the URL and key in the app's Settings → Supabase).
+- Not built yet: the Report button, iOS. Leerie's clustering trigger to adapt for hotspots is in its repo,
+  `supabase/migrations/20260901000000_init.sql` (`detections_cluster`).
+
 ## Starting code
-- `sensor/` is Flutter but **Android-only**: there is no `ios/` folder. Generate one with
-  `flutter create . --platforms ios`, then add `NSCameraUsageDescription` and
-  `NSLocationWhenInUseUsageDescription` to `ios/Runner/Info.plist`.
-- The camera already uses `ImageFormatGroup.yuv420` (NV12 on iOS), so `planes[0]` is the Y plane
-  the brief's brightness code expects. The app picks the first back camera; lock it to the wide camera.
-- The Supabase URL and anon key are set with `--dart-define` or in the in-app Settings sheet.
-  Phones hardcode demo scanner UUIDs in `config.dart`; replace them with a random `session_id` per walk.
-- Breadcrumbs post to `scanner_positions` (`sensor/lib/data/models.dart`, `supabase_rest.dart`);
-  point them at `light_readings`.
-- `supabase/migrations/20260901000000_init.sql` has the clustering trigger to adapt
-  (`detections_cluster`). Its `demo_all` policies are wide open, so don't copy them.
+- `sensor/` has no `ios/` folder. Generate one with `flutter create . --platforms ios`, then add
+  `NSCameraUsageDescription` and `NSLocationWhenInUseUsageDescription` to `ios/Runner/Info.plist`.
+  On iOS, change the luminance lookup in `luminance.dart` to video range: `(v-16)/219`.
 - `dashboard/` is Next.js 16 + MapLibre + zustand, and runs on synthetic data with no `.env.local`.
   Reuse `components/console/map/RouteLayer.tsx`, `DispatchSheet.tsx` (planner layout) and `lib/map/style.ts`.
   Clients read `*_map` views, because PostgREST returns geography as hex WKB.

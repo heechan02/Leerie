@@ -110,20 +110,14 @@ class SupabaseRest {
     }
   }
 
-  /// A batch of 1 Hz breadcrumbs. One request per five seconds of driving.
-  Future<void> postPositions(
-    List<Breadcrumb> batch, {
-    required String tripId,
-    required String scannerId,
-  }) async {
+  /// A batch of 1 Hz light readings.
+  Future<void> postPositions(List<Breadcrumb> batch, {required String sessionId}) async {
     if (batch.isEmpty) return;
     final response = await _client
         .post(
-          Uri.parse('$_base/rest/v1/scanner_positions'),
+          Uri.parse('$_base/rest/v1/light_readings'),
           headers: _headers,
-          body: jsonEncode(
-            batch.map((b) => b.toJson(tripId: tripId, scannerId: scannerId)).toList(),
-          ),
+          body: jsonEncode(batch.map((b) => b.toJson(sessionId: sessionId)).toList()),
         )
         .timeout(_timeout);
 
@@ -180,7 +174,8 @@ class SupabaseRest {
   Future<void> ping() async {
     final response = await _client
         .get(
-          Uri.parse('$_base/rest/v1/crews?select=id&limit=1'),
+          // RLS hides every row from anon, so this returns [] — but only if the key and table exist.
+          Uri.parse('$_base/rest/v1/light_readings?select=id&limit=1'),
           headers: _headers,
         )
         .timeout(const Duration(seconds: 10));

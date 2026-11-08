@@ -73,15 +73,10 @@ class DetectionJob extends UploadJob {
 }
 
 class PositionsJob extends UploadJob {
-  PositionsJob({
-    required this.batch,
-    required this.tripId,
-    required this.scannerId,
-  });
+  PositionsJob({required this.batch, required this.sessionId});
 
   final List<Breadcrumb> batch;
-  final String tripId;
-  final String scannerId;
+  final String sessionId;
 
   @override
   int get maxAttempts => 3;
@@ -91,7 +86,7 @@ class PositionsJob extends UploadJob {
 
   @override
   Future<void> run(SupabaseRest rest) =>
-      rest.postPositions(batch, tripId: tripId, scannerId: scannerId);
+      rest.postPositions(batch, sessionId: sessionId);
 }
 
 class TripEndJob extends UploadJob {

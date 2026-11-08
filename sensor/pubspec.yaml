@@ -16,6 +16,8 @@ dependencies:
 
   # Road-facing camera and the frame stream the vision detector runs on.
   camera: ^0.12.0
+  # Camera2 backend: unlike the default CameraX one, it reports exposure time, ISO and aperture per frame.
+  camera_android: ^0.10.10
   # Raw accelerometer (gravity included; we estimate and remove it ourselves).
   sensors_plus: ^6.0.1
   # Position, speed, heading and GPS accuracy for every detection and breadcrumb.

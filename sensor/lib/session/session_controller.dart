@@ -24,6 +24,7 @@ import '../data/upload_queue.dart';
 import '../detect/accel_detector.dart';
 import '../detect/frame_encoder.dart';
 import '../detect/frame_sampler.dart';
+import '../detect/luminance.dart';
 import '../detect/vision_detector.dart';
 import 'settings.dart';
 
@@ -129,6 +130,12 @@ class SessionController extends ChangeNotifier {
   double distanceM = 0;
   double processedFps = 0;
 
+  /// Latest exposure-corrected luminance, relative units. Null until the camera reports exposure.
+  double? luminance;
+  double _lumSum = 0;
+  int _lumCount = 0;
+  ({double? iso, double? exposureS, double? aperture})? _lastExposure;
+
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<Position>? _posSub;
   Timer? _flushTimer;
@@ -175,12 +182,16 @@ class SessionController extends ChangeNotifier {
     }
     if (recording == RecordingState.starting) return 'Starting the trip';
     if (recording == RecordingState.stopping) return 'Ending the trip';
+    final lum = luminance;
+    final light = lum == null
+        ? ' · light: no exposure data from camera'
+        : ' · light ${lum.toStringAsFixed(1)} (relative)';
     if (isRecording) {
       final started = startedAt;
       final since = started == null ? '' : ' since ${_hhmm(started)}';
       return uploadsOn
-          ? 'Recording$since · writing to ${_settings.supabase.host}'
-          : 'Recording$since · held on the phone';
+          ? 'Recording$since · writing to ${_settings.supabase.host}$light'
+          : 'Recording$since · held on the phone$light';
     }
     return supabaseConfigured
         ? 'Not recording. Detections are held on the phone.'
@@ -319,27 +330,24 @@ class SessionController extends ChangeNotifier {
   void _handleFrame(CameraImage image) {
     if (_disposed) return;
 
-    // A detection asked for a photograph; this is the next frame, so take it.
-    final wanted = _photoWanted;
-    if (wanted != null) {
-      _photoWanted = null;
-      _capturePhoto(image, wanted);
+    final lum = relativeLuminance(
+      image.planes[0].bytes,
+      exposureNs: image.sensorExposureTime,
+      iso: image.sensorSensitivity,
+      aperture: image.lensAperture,
+    );
+    _lastExposure = (
+      iso: image.sensorSensitivity,
+      exposureS: image.sensorExposureTime == null ? null : image.sensorExposureTime! / 1e9,
+      aperture: image.lensAperture,
+    );
+    if (lum != null) {
+      _lumSum += lum;
+      _lumCount++;
+      luminance = lum;
     }
-
-    if (!_settings.cameraDetector) return;
-    if (!_vision.shouldProcess()) return;
-
-    try {
-      final frame = _sampler.sample(image, _rotation);
-      final result = _vision.analyse(frame, DateTime.now());
-      vision.value = result;
-      _tickFps();
-
-      final hit = result.hit;
-      if (hit != null) _onVisionHit(hit);
-    } on Object catch (error) {
-      debugPrint('Leerie: frame analysis failed. $error');
-    }
+    _tickFps();
+    // Leerie's hazard vision detector is not run: this app only measures light.
   }
 
   void _capturePhoto(CameraImage image, DetectionEntry entry) {
@@ -383,13 +391,20 @@ class SessionController extends ChangeNotifier {
       final last = _lastBreadcrumbAt;
       if (last == null || DateTime.now().difference(last).inMilliseconds >= 900) {
         _lastBreadcrumbAt = DateTime.now();
+        final exposure = _lastExposure;
         _breadcrumbs.add(Breadcrumb(
           recordedAt: position.timestamp,
           lat: position.latitude,
           lng: position.longitude,
+          gpsAccuracyM: position.accuracy,
           speedMps: position.speed,
-          headingDeg: position.heading,
+          brightness: _lumCount == 0 ? null : _lumSum / _lumCount,
+          iso: exposure?.iso,
+          exposureS: exposure?.exposureS,
+          aperture: exposure?.aperture,
         ));
+        _lumSum = 0;
+        _lumCount = 0;
 
         final previous = _lastDistanceFix;
         if (previous != null && position.accuracy <= 30) {
@@ -414,16 +429,15 @@ class SessionController extends ChangeNotifier {
     final batch = List<Breadcrumb>.of(_breadcrumbs);
     _breadcrumbs.clear();
     if (trip == null || !uploadsOn) return;
-    queue.add(PositionsJob(
-      batch: batch,
-      tripId: trip,
-      scannerId: scanner.scannerId,
-    ));
+    queue.add(PositionsJob(batch: batch, sessionId: trip));
   }
 
   // ─── Detections ───────────────────────────────────────────────────────────
 
   void _onAccelHit(AccelHit hit) {
+    // Night-light measures light only; Leerie's hazard detections table does not exist here.
+    return;
+    // ignore: dead_code
     if (!_settings.accelDetector) return;
     _fire(
       source: DetectionSource.accelerometer,
@@ -616,18 +630,10 @@ class SessionController extends ChangeNotifier {
     _accel.reset();
     _vision.reset();
 
-    if (uploadsOn) {
-      try {
-        tripId = await _rest!.createTrip(
-          deviceId: scanner.deviceId,
-          scannerId: scanner.scannerId,
-        );
-      } on Object catch (error) {
-        tripId = null;
-        notice = 'Could not open a trip. Detections will still be sent; '
-            'the breadcrumb trail will not. ${_short(error)}';
-      }
-    }
+    // The session id: random per walk, never tied to a person or phone.
+    tripId = _uuid.v4();
+    _lumSum = 0;
+    _lumCount = 0;
 
     startedAt = DateTime.now();
     _flushTimer?.cancel();
@@ -648,10 +654,6 @@ class SessionController extends ChangeNotifier {
     _flushTimer = null;
     _flushBreadcrumbs();
 
-    final trip = tripId;
-    if (trip != null && uploadsOn) {
-      queue.add(TripEndJob(tripId: trip, distanceM: distanceM));
-    }
     tripId = null;
     unawaited(WakelockPlus.disable());
 
