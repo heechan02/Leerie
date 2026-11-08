@@ -67,6 +67,7 @@
 /* -- Sections */
 .ld-section { max-width: 1120px; margin: 0 auto; padding: var(--s8) clamp(16px, 4vw, 48px); }
 .ld-section > .ld-h2 { max-width: 760px; margin-bottom: var(--s6); }
+.ld-shifts { max-width: 640px; margin: calc(var(--s6) * -0.5) 0 var(--s6); font-size: var(--t-lead); }
 
 .ld-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s4); }
 .ld-stat {

@@ -91,6 +91,9 @@ export function Landing() {
         <section id="night" className="ld-section">
           <p className="micro ld-eyebrow">Last night · 7 to 8 November 2026</p>
           <h2 className="display ld-h2">One night between George Square and King&apos;s Buildings.</h2>
+          <p className="ld-shifts secondary">
+            We took it in shifts. All night, until 6:30, one of us was out on the streets with the phones while the rest kept building.
+          </p>
           <LiveNumbers />
           <Link className="lr-button" href="/map">Explore the map</Link>
         </section>
