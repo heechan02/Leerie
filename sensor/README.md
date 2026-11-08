@@ -41,5 +41,5 @@ lib/
   detect/luminance.dart        exposure-corrected relative luminance per frame
   data/                        row shapes, PostgREST client, upload queue
   session/                     settings (Supabase only) and the controller
-  ui/                          the console, full-screen camera, settings sheet
+  ui/                          the console, expandable camera panel, settings sheet
 ```
