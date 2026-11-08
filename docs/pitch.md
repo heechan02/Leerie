@@ -58,12 +58,13 @@ Have three things open: the landing page at the top, `/map` in a second tab, and
 
 **Screenshots** (in `docs/screenshots/`, in this order; the first is the cover):
 1. `1-landing.png`
-2. `3-map-hover.png`
-3. `4-plan.png`
-4. `5-lamped-but-dark.png`
-5. `2-why.png`
-6. `7-mapped.png`
-7. a phone screenshot of the app while recording (take it on the phone)
+2. `8-lamps-vs-light.png`
+3. `3-map-hover.png`
+4. `4-plan.png`
+5. `5-lamped-but-dark.png`
+6. `2-why.png`
+7. `7-mapped.png`
+8. a phone screenshot of the app while recording (take it on the phone)
 
 **Project description:**
 
