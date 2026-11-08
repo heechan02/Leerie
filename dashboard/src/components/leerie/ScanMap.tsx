@@ -115,10 +115,12 @@ export function ScanMap() {
 
   // Open on the streets that have data: measured ones, else anything with an estimate.
   const fitted = useRef(false);
+  // Read before the map mounts: once it loads, the map writes its own #zoom/lat/lng into the URL.
+  const openedWithView = useRef(typeof window !== "undefined" && /^#[\d.]+\//.test(window.location.hash));
   useEffect(() => {
     const map = mapRef.current;
     // A #zoom/lat/lng link (the map's `hash`) opens exactly there instead.
-    if (!loaded || !mapReady || !map || fitted.current || window.location.hash) return;
+    if (!loaded || !mapReady || !map || fitted.current || openedWithView.current) return;
     const fs = loaded.data.features;
     const focus = fs.filter((f) => f.properties.measured);
     const pts = (focus.length ? focus : fs.filter((f) => f.properties.L != null)).flatMap((f) => f.geometry.coordinates);
@@ -156,7 +158,7 @@ export function ScanMap() {
           ref={mapRef}
           onLoad={() => setMapReady(true)}
           hash
-          initialViewState={{ longitude: CENTER[0], latitude: CENTER[1], zoom: 14.3 }}
+          initialViewState={{ longitude: CENTER[0], latitude: CENTER[1], zoom: 13.8 }}
           mapStyle={style}
           style={{ position: "absolute", inset: 0 }}
           dragRotate={false}
@@ -310,7 +312,7 @@ export function ScanMap() {
 /** Keep the streets clear of the floating panel on wide screens. */
 function fitPadding() {
   const wide = typeof window !== "undefined" && window.innerWidth > 860;
-  return { top: 90, bottom: 60, left: 60, right: wide ? 450 : 40 };
+  return { top: 110, bottom: 90, left: 90, right: wide ? 470 : 40 };
 }
 
 function StatCard({ value, label, loading }: { value: string; label: string; loading: boolean }) {
