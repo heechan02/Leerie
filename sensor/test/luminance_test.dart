@@ -18,6 +18,14 @@ void main() {
     expect(b / a, closeTo(1, 0.02));
   });
 
+  test('iOS video range maps 16 to black and 235 to white', () {
+    expect(meanLinearLuma(Uint8List.fromList([16, 235]), step: 1, videoRange: true), closeTo(0.5, 1e-9));
+    expect(meanLinearLuma(Uint8List.fromList([10]), step: 1, videoRange: true), 0); // below 16 clamps
+    // A dark street at Y=20 reads brighter if video range is mistaken for full range.
+    final dark = Uint8List.fromList([20]);
+    expect(meanLinearLuma(dark, step: 1), greaterThan(meanLinearLuma(dark, step: 1, videoRange: true)));
+  });
+
   test('missing exposure gives null, never 0', () {
     expect(relativeLuminance(grey, exposureNs: null, iso: 400, aperture: 1.8), isNull);
   });

@@ -28,8 +28,10 @@
 - Build and install on a USB-connected phone, from `sensor/`:
   `flutter run --release --dart-define=SUPABASE_URL=https://<ref>.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon>`
   (or set the URL and key in the app's Settings → Supabase).
-- Comfortable/Uncomfortable buttons write to `incidents`. Not built yet: iOS (see the brief's checklist). Leerie's clustering trigger to adapt for hotspots is in its repo,
-  `supabase/migrations/20260901000000_init.sql` (`detections_cluster`).
+- Comfortable/Uncomfortable buttons write to `incidents`, only while recording (so every report has a `session_id`).
+- iOS works (same Flutter code): video-range luma on iOS, main wide lens, 1 Hz GPS, `device_model` from a build define.
+  Put `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `DEVICE_MODEL=iphone-<model>` in `sensor/.env` (gitignored), then
+  `flutter run --release --dart-define-from-file=.env`. Give each phone its own `DEVICE_MODEL`: calibration is per label.
 
 ## Starting code
 - `sensor/` has no `ios/` folder. Generate one with `flutter create . --platforms ios`, then add

@@ -7,6 +7,7 @@
 // the console around them.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
@@ -138,6 +139,7 @@ class SessionController extends ChangeNotifier {
   ({double? iso, double? exposureS, double? aperture})? get exposure => _lastExposure;
   int readingsRecorded = 0;
   DateTime _lastLumPaint = DateTime(0);
+  bool _loggedStride = false;
 
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<Position>? _posSub;
@@ -219,10 +221,11 @@ class SessionController extends ChangeNotifier {
         _set(() => cameraStatus = CameraStatus.unavailable);
         return;
       }
-      final description = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
-      );
+      // iPhones list each back lens separately; lock to the main wide one so readings stay comparable.
+      final back = cameras.where((c) => c.lensDirection == CameraLensDirection.back);
+      final description = back.where((c) => c.lensType == CameraLensType.wide).firstOrNull ??
+          back.firstOrNull ??
+          cameras.first;
 
       final controller = CameraController(
         description,
@@ -286,9 +289,20 @@ class SessionController extends ChangeNotifier {
 
       await _posSub?.cancel();
       _posSub = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-        ),
+        // Platform defaults throttle to ~1 fix per 5 s; ask for 1 Hz on both.
+        locationSettings: Platform.isIOS
+            ? AppleSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                activityType: ActivityType.fitness,
+                distanceFilter: 0,
+                pauseLocationUpdatesAutomatically: false,
+                allowBackgroundLocationUpdates: false,
+              )
+            : AndroidSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                distanceFilter: 0,
+                intervalDuration: const Duration(seconds: 1),
+              ),
       ).listen(_onPosition, onError: (Object error) {
         debugPrint('Leerie: position stream error. $error');
       });
@@ -329,11 +343,16 @@ class SessionController extends ChangeNotifier {
   void _handleFrame(CameraImage image) {
     if (_disposed) return;
 
+    if (!_loggedStride) {
+      _loggedStride = true;
+      debugPrint('Leerie: Y plane bytesPerRow=${image.planes[0].bytesPerRow} width=${image.width}');
+    }
     final lum = relativeLuminance(
       image.planes[0].bytes,
       exposureNs: image.sensorExposureTime,
       iso: image.sensorSensitivity,
       aperture: image.lensAperture,
+      videoRange: Platform.isIOS,
     );
     _lastExposure = (
       iso: image.sensorSensitivity,
@@ -447,6 +466,8 @@ class SessionController extends ChangeNotifier {
     final position = lastPosition;
     if (position == null) return 'No GPS fix yet, so the report was not sent.';
     if (!uploadsOn) return 'Supabase is not set, so the report was not sent.';
+    // A report needs the walk's session_id, or the hotspot trigger can never confirm it.
+    if (tripId == null) return 'Start recording first, so the report belongs to this walk.';
     queue.add(IncidentJob(Incident(
       createdAt: DateTime.now(),
       lat: position.latitude,

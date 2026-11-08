@@ -2,6 +2,7 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    - ios/**
 include: package:flutter_lints/flutter.yaml
 
 # The defaults, deliberately. `flutter analyze` should stay quiet enough that a

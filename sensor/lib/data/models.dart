@@ -103,6 +103,9 @@ class DetectionRecord {
   }
 }
 
+/// Set per build with `--dart-define=DEVICE_MODEL=iphone-<model>`, so the pipeline can calibrate phones apart.
+const deviceModel = String.fromEnvironment('DEVICE_MODEL');
+
 /// One row of `light_readings`. Posted in batches of `breadcrumbBatchSeconds`.
 class Breadcrumb {
   const Breadcrumb({
@@ -140,6 +143,7 @@ class Breadcrumb {
       'iso': iso,
       'exposure_s': exposureS,
       'aperture': aperture,
+      'device_model': deviceModel.isEmpty ? null : deviceModel,
     };
   }
 }
