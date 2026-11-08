@@ -25,3 +25,11 @@ String bearingDegrees(double? v) =>
 String kilometres(double km) => '${km.toStringAsFixed(1)} km';
 
 String percent(double zeroToOne) => '${(zeroToOne * 100).round()}%';
+
+/// Elapsed time as "4:07" or "1:04:07".
+String elapsed(Duration d) {
+  final h = d.inHours;
+  final m = d.inMinutes % 60;
+  final s = two(d.inSeconds % 60);
+  return h > 0 ? '$h:${two(m)}:$s' : '$m:$s';
+}

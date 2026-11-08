@@ -120,7 +120,7 @@ class _RoadViewScreenState extends State<RoadViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BchColor.neutral900,
+      backgroundColor: BchColor.bg,
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,

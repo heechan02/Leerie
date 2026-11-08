@@ -25,10 +25,10 @@ Future<void> main() async {
   );
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    statusBarBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
     systemNavigationBarColor: BchColor.bg,
-    systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
 
   final settings = await SensorSettings.load();
@@ -65,7 +65,7 @@ class _LeerieSensorAppState extends State<LeerieSensorApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Leerie Sensor',
+      title: 'Leerie',
       debugShowCheckedModeBanner: false,
       theme: buildLeerieTheme(),
       home: ConsoleScreen(controller: widget.controller),

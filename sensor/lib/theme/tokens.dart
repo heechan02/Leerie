@@ -1,65 +1,67 @@
-// Leerie design tokens, transcribed from dashboard/src/app/globals.css.
-// Spec: docs/design/DESIGN.md. Never hard-code a colour, size, radius, shadow or
-// duration in a widget — take it from here, exactly as the web app takes it from
-// var(--…). Light theme only; there is no dark mode.
+// Leerie design tokens, from Leerie's dashboard/src/app/globals.css, inverted for
+// night use: the scanner is read at 3am, so the ground is near-black and the ink is
+// off-white (never pure white). Spec: docs/design/DESIGN.md. Never hard-code a
+// colour, size, radius, shadow or duration in a widget; take it from here.
 //
 // Ink steps are written as explicit ARGB constants rather than computed with
 // withOpacity/withValues so they are const and stable across Flutter versions.
 
 import 'package:flutter/widgets.dart';
 
-/// Colour. One accent (steel). No red/amber/green status palette — status is
-/// carried by fill, weight and form, and always also by a word.
+/// Colour. One accent (steel), plus one red that only ever means "recording".
+/// Scales run from the ground (100) to the ink (900), so on this dark theme
+/// 100 is the darkest step.
 abstract final class BchColor {
-  static const bg = Color(0xFFF2F2F3);
-  static const surface = Color(0xFFE9E9EA);
-  static const text = Color(0xFF1D1F20);
-  static const accent = Color(0xFF5980A6);
+  static const bg = Color(0xFF0E1013);
+  static const surface = Color(0xFF181A1E);
+  static const text = Color(0xFFE2E4E7);
+  static const accent = Color(0xFF8DB2D8);
 
-  static const accent100 = Color(0xFFEEF6FF);
-  static const accent200 = Color(0xFFD6EBFF);
-  static const accent300 = Color(0xFFB5D9FD);
-  static const accent400 = Color(0xFF94BCE3);
+  /// Recording. The one status colour, always paired with the word.
+  static const live = Color(0xFFE5484D);
+  static const live24 = Color(0x3DE5484D);
+
+  static const accent100 = Color(0xFF1D2D3D);
+  static const accent200 = Color(0xFF2C455D);
+  static const accent300 = Color(0xFF416180);
+  static const accent400 = Color(0xFF597EA3);
   static const accent500 = Color(0xFF749DC4);
-  static const accent600 = Color(0xFF597EA3);
-  static const accent700 = Color(0xFF416180);
-  static const accent800 = Color(0xFF2C455D);
-  static const accent900 = Color(0xFF1D2D3D);
+  static const accent600 = Color(0xFF94BCE3);
+  static const accent700 = Color(0xFFB5D9FD);
+  static const accent800 = Color(0xFFD6EBFF);
+  static const accent900 = Color(0xFFEEF6FF);
 
-  static const neutral100 = Color(0xFFF5F5F8);
-  static const neutral200 = Color(0xFFE7E7EA);
-  static const neutral300 = Color(0xFFD4D4D7);
-  static const neutral400 = Color(0xFFB7B7BA);
-  static const neutral500 = Color(0xFF98989B);
-  static const neutral600 = Color(0xFF7A7A7D);
-  static const neutral700 = Color(0xFF5D5D60);
-  static const neutral800 = Color(0xFF424244);
-  static const neutral900 = Color(0xFF2B2B2D);
+  static const neutral100 = Color(0xFF1A1C1F);
+  static const neutral200 = Color(0xFF222428);
+  static const neutral300 = Color(0xFF2E3034);
+  static const neutral400 = Color(0xFF424447);
+  static const neutral500 = Color(0xFF7A7A7D);
+  static const neutral600 = Color(0xFF98989B);
+  static const neutral700 = Color(0xFFB7B7BA);
+  static const neutral800 = Color(0xFFD4D4D7);
+  static const neutral900 = Color(0xFFE7E7EA);
 
-  /// Ink at the fixed opacities used throughout the mockup.
-  static const ink72 = Color(0xB81D1F20);
-  static const ink58 = Color(0x941D1F20);
-  static const ink55 = Color(0x8C1D1F20);
-  static const ink45 = Color(0x731D1F20);
-  static const ink38 = Color(0x611D1F20);
-  static const ink12 = Color(0x1F1D1F20);
-  static const ink7 = Color(0x121D1F20);
-  static const ink5 = Color(0x0D1D1F20);
-  static const ink3 = Color(0x081D1F20);
+  /// Ink (the `text` colour) at the fixed opacities used throughout the mockup.
+  static const ink72 = Color(0xB8E2E4E7);
+  static const ink58 = Color(0x94E2E4E7);
+  static const ink55 = Color(0x8CE2E4E7);
+  static const ink45 = Color(0x73E2E4E7);
+  static const ink38 = Color(0x61E2E4E7);
+  static const ink12 = Color(0x1FE2E4E7);
+  static const ink7 = Color(0x12E2E4E7);
+  static const ink5 = Color(0x0DE2E4E7);
+  static const ink3 = Color(0x08E2E4E7);
 
   /// Hairlines. Everything is separated by one of these, never by a gap.
-  static const divider = Color(0x291D1F20); // ink 16%
+  static const divider = Color(0x29E2E4E7); // ink 16%
 
-  /// Steel at partial strength — guides, washes and the fired-blob fill.
-  static const accent40 = Color(0x665980A6);
-  static const accent24 = Color(0x3D5980A6);
-  static const accent10 = Color(0x1A5980A6);
+  /// Steel at partial strength: guides, washes and the meter track.
+  static const accent40 = Color(0x668DB2D8);
+  static const accent24 = Color(0x3D8DB2D8);
+  static const accent10 = Color(0x1A8DB2D8);
 
-  /// Over the camera image the ground is a photograph, not `bg`, so ink at 5%
-  /// is invisible. These are the same steps inverted — the one deviation from
-  /// the token table, and only for marks drawn on top of the image. Chips and
-  /// labels over the image still sit on `bg` with `shadow-sm`, as in the mockup.
-  static const scrim = Color(0x8C1D1F20);
+  /// Marks drawn over the camera image, where the ground is a photograph.
+  static const scrim = Color(0x8C0E1013);
   static const white = Color(0xFFFFFFFF);
   static const white10 = Color(0x1AFFFFFF);
   static const white24 = Color(0x3DFFFFFF);
@@ -118,6 +120,10 @@ abstract final class BchFrame {
   static const rowH = 58.0;
   static const rowHCompact = 46.0;
   static const footerH = 68.0;
+  static const meterBarH = 16.0;
+
+  /// Thumb-sized at arm's length, gloved, at night.
+  static const actionH = 64.0;
   static const inspectorMinH = 132.0;
 
   /// The graticule that makes a surface read as survey rather than photograph.
@@ -154,6 +160,17 @@ abstract final class BchType {
     fontWeight: FontWeight.w600,
     height: 1,
     letterSpacing: -0.45,
+    color: BchColor.text,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  /// The live light reading: the number the stage demo is watched by.
+  static const hero = TextStyle(
+    fontFamily: family,
+    fontSize: 64,
+    fontWeight: FontWeight.w600,
+    height: 1,
+    letterSpacing: -1,
     color: BchColor.text,
     fontFeatures: [FontFeature.tabularFigures()],
   );
@@ -237,6 +254,14 @@ abstract final class BchType {
     letterSpacing: 1.2,
     height: 1.2,
     color: BchColor.ink55,
+  );
+
+  /// Record/Stop and the report buttons, read at arm's length.
+  static const action = TextStyle(
+    fontFamily: family,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
   );
 
   static const button = TextStyle(

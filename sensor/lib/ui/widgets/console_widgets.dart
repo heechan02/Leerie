@@ -2,7 +2,8 @@
 // separated by a single hairline, never by a gap and never by a shadow; elevation
 // is reserved for things that overlap the camera image.
 
-import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
@@ -123,34 +124,6 @@ class MetricRow extends StatelessWidget {
   }
 }
 
-/// Four segments filled from the left. Segmented rather than continuous so
-/// severity reads as a measured grade, not a mood.
-class SeverityBar extends StatelessWidget {
-  const SeverityBar({super.key, required this.severity, required this.mark});
-
-  final double severity;
-  final Color mark;
-
-  @override
-  Widget build(BuildContext context) {
-    final filled = (severity.clamp(0.0, 1.0) * 4).ceil().clamp(1, 4);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List<Widget>.generate(4, (i) {
-        return Container(
-          width: 9,
-          height: 5,
-          margin: EdgeInsets.only(left: i == 0 ? 0 : 2),
-          decoration: BoxDecoration(
-            color: i < filled ? mark : BchColor.ink12,
-            borderRadius: const BorderRadius.all(Radius.circular(2)),
-          ),
-        );
-      }),
-    );
-  }
-}
-
 /// A pill that filters or switches. The count in its label is a filter, never a
 /// decorative statistic.
 class BchChip extends StatelessWidget {
@@ -190,56 +163,6 @@ class BchChip extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: BchType.chip.copyWith(
               color: selected ? BchColor.bg : BchColor.ink72,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The one solid steel object on screen.
-class PrimaryButton extends StatelessWidget {
-  const PrimaryButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.busy = false,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null && !busy;
-    return Opacity(
-      opacity: enabled ? 1 : 0.45,
-      child: Material(
-        color: BchColor.accent,
-        borderRadius: BchRadius.lgAll,
-        child: InkWell(
-          borderRadius: BchRadius.lgAll,
-          onTap: enabled ? onPressed : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 18),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (busy) ...<Widget>[
-                  const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(BchColor.bg),
-                    ),
-                  ),
-                  const SizedBox(width: BchSpace.s2),
-                ],
-                Text(label, style: BchType.button.copyWith(color: BchColor.bg)),
-              ],
             ),
           ),
         ),
@@ -293,41 +216,18 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
-/// Status spelled out in an outlined pill. Status text is never abbreviated and
-/// never carried by colour alone.
-class StatusTag extends StatelessWidget {
-  const StatusTag(this.text, {super.key, this.muted = false});
-
-  final String text;
-  final bool muted;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = muted ? BchColor.neutral500 : BchColor.accent;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        border: Border.all(color: color),
-        borderRadius: BchRadius.lgAll,
-      ),
-      child: Text(
-        text,
-        style: BchType.caption.copyWith(
-          color: color,
-          fontSize: 11,
-          letterSpacing: 0.22,
-        ),
-      ),
-    );
-  }
-}
-
 /// The only looping animation in the product.
 class LiveDot extends StatefulWidget {
-  const LiveDot({super.key, this.active = true, this.color = BchColor.accent});
+  const LiveDot({
+    super.key,
+    this.active = true,
+    this.color = BchColor.accent,
+    this.size = 7,
+  });
 
   final bool active;
   final Color color;
+  final double size;
 
   @override
   State<LiveDot> createState() => _LiveDotState();
@@ -369,8 +269,8 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
       builder: (context, _) {
         final opacity = widget.active ? 1 - _controller.value * 0.7 : 0.35;
         return Container(
-          width: 7,
-          height: 7,
+          width: widget.size,
+          height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: widget.color.withAlpha((opacity * 255).round()),
@@ -381,119 +281,104 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Vertical acceleration, live, with the firing threshold marked on both sides.
-/// An instrument, not an animation: it draws the signal as it arrives, with no
-/// transition of its own, so what it shows is what the detector is deciding on.
-class AccelMeter extends StatelessWidget {
-  const AccelMeter({
+/// Stops are log2(luminance / reference). The reference is a typical street from
+/// the first night's data (readings ran about 0.02 to 0.2, geometric middle about
+/// 0.06), so a street reads near 0, a room a stop or two above, a covered lens at
+/// the bottom of the bar and a ceiling light at the top. Uncalibrated: per phone,
+/// not the dashboard's stops.
+const kMeterReferenceLuminance = 0.06;
+const kMeterMinStops = -6.0;
+const kMeterMaxStops = 6.0;
+
+double luminanceStops(double luminance) =>
+    math.log(math.max(luminance, 1e-9) / kMeterReferenceLuminance) / math.ln2;
+
+/// Where a reading sits on the meter, 0 (left) to 1 (right), clamped.
+double meterFraction(double stops) =>
+    ((stops - kMeterMinStops) / (kMeterMaxStops - kMeterMinStops)).clamp(0.0, 1.0);
+
+/// The live light reading: a large number in stops and a bar that moves with it.
+class LightMeter extends StatelessWidget {
+  const LightMeter({
     super.key,
-    required this.level,
-    required this.threshold,
-    required this.active,
+    required this.luminance,
+    required this.emptyMessage,
+    this.detail,
   });
 
-  final ValueListenable<double> level;
+  /// Exposure-corrected relative luminance, or null when there is none.
+  final double? luminance;
 
-  /// m/s² at which the detector arms.
-  final double threshold;
+  /// Shown instead of a number when [luminance] is null.
+  final String emptyMessage;
 
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: CustomPaint(
-        size: const Size(double.infinity, 12),
-        painter: _AccelMeterPainter(
-          level: level,
-          threshold: threshold,
-          active: active,
-        ),
-      ),
-    );
-  }
-}
-
-class _AccelMeterPainter extends CustomPainter {
-  _AccelMeterPainter({
-    required this.level,
-    required this.threshold,
-    required this.active,
-  }) : super(repaint: level);
-
-  final ValueListenable<double> level;
-  final double threshold;
-  final bool active;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final midX = size.width / 2;
-    final midY = size.height / 2;
-
-    canvas.drawLine(
-      Offset(0, midY),
-      Offset(size.width, midY),
-      Paint()
-        ..color = BchColor.ink7
-        ..strokeWidth = 3,
-    );
-
-    // The threshold sits at 45% out from the centre, so a firing impact runs
-    // visibly past its mark rather than pinning at the edge.
-    final scale = threshold <= 0 ? 0.0 : (midX * 0.45) / threshold;
-    for (final side in <double>[-1, 1]) {
-      final x = midX + side * threshold * scale;
-      canvas.drawLine(
-        Offset(x, 1),
-        Offset(x, size.height - 1),
-        Paint()
-          ..color = BchColor.accent40
-          ..strokeWidth = 1,
-      );
-    }
-
-    if (!active) return;
-
-    final value = level.value;
-    final extent = (value * scale).clamp(-midX, midX).toDouble();
-    canvas.drawLine(
-      Offset(midX, midY),
-      Offset(midX + extent, midY),
-      Paint()
-        ..color = value.abs() >= threshold ? BchColor.accent : BchColor.ink38
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AccelMeterPainter old) =>
-      old.threshold != threshold || old.active != active || old.level != level;
-}
-
-/// Pending data shows a hairline placeholder with the panel label still legible.
-/// No skeleton shimmer.
-class PlaceholderBox extends StatelessWidget {
-  const PlaceholderBox({super.key, required this.message, this.height = 72});
-
-  final String message;
-  final double height;
+  /// Small print under the bar (the camera's exposure settings).
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      alignment: Alignment.center,
+    final lum = luminance;
+    final stops = lum == null ? null : luminanceStops(lum);
+    return Padding(
       padding: const EdgeInsets.all(BchSpace.s4),
-      decoration: const BoxDecoration(
-        border: Border.fromBorderSide(BorderSide(color: BchColor.divider)),
-        borderRadius: BchRadius.mdAll,
-      ),
-      child: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: BchType.caption,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const PanelLabel(
+            'Light',
+            trailing: Text('relative, not lux', style: BchType.caption),
+          ),
+          const SizedBox(height: BchSpace.s2),
+          if (stops == null)
+            SizedBox(
+              height: BchType.hero.fontSize,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(emptyMessage, style: BchType.inspectorTitle),
+              ),
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: <Widget>[
+                Text(
+                  '${stops >= 0 ? '+' : '\u2212'}${stops.abs().toStringAsFixed(1)}',
+                  style: BchType.hero,
+                ),
+                const SizedBox(width: BchSpace.s2),
+                const Text('stops', style: BchType.rowPrimary),
+              ],
+            ),
+          const SizedBox(height: BchSpace.s3),
+          ClipRRect(
+            borderRadius: BchRadius.smAll,
+            child: Container(
+              height: BchFrame.meterBarH,
+              color: BchColor.ink12,
+              child: stops == null
+                  ? null
+                  : AnimatedFractionallySizedBox(
+                      duration: BchMotion.state,
+                      curve: BchMotion.ease,
+                      alignment: Alignment.centerLeft,
+                      widthFactor: meterFraction(stops),
+                      child: const ColoredBox(color: BchColor.accent),
+                    ),
+            ),
+          ),
+          const SizedBox(height: BchSpace.s1),
+          Row(
+            children: <Widget>[
+              Text('dark  ${kMeterMinStops.round()}', style: BchType.caption),
+              const Spacer(),
+              Text('+${kMeterMaxStops.round()}  bright', style: BchType.caption),
+            ],
+          ),
+          if (detail != null)
+            Text(detail!, maxLines: 1, overflow: TextOverflow.ellipsis, style: BchType.caption),
+        ],
       ),
     );
   }

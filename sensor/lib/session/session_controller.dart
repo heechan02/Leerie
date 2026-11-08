@@ -183,7 +183,7 @@ class SessionController extends ChangeNotifier {
   /// What the footer says the app is doing. Measurement, then inference.
   String get statusLine {
     if (cameraStatus == CameraStatus.denied) {
-      return 'Camera access refused. Grant it in Android settings, then reopen the app.';
+      return 'Camera access refused. Allow it in Settings, then reopen the app.';
     }
     if (recording == RecordingState.starting) return 'Starting the trip';
     if (recording == RecordingState.stopping) return 'Ending the trip';

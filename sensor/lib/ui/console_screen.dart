@@ -1,19 +1,16 @@
-// The sensor console. The dashboard's frame, on a phone in a cradle: a header
-// strip, the thing being watched, metric cells divided by hairlines, the queue,
-// a fixed-height inspector, and one solid steel action in the footer bar.
+// The Leerie scanner. Read at arm's length on a night walk: who is recording,
+// the live light meter, where the camera points, the walk's numbers, the two
+// report buttons and one big Record/Stop control.
 
 import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../core/format.dart';
 import '../core/geo.dart';
-import '../detect/vision_detector.dart';
+import '../data/models.dart';
 import '../session/session_controller.dart';
 import '../session/settings.dart';
 import '../theme/tokens.dart';
-import 'detection_row.dart';
-import 'evidence_sheet.dart';
-import 'inspector.dart';
 import 'preview_surface.dart';
 import 'settings_sheet.dart';
 import 'widgets/console_widgets.dart';
@@ -61,13 +58,15 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               children: <Widget>[
                 _header(context),
                 const Hairline(),
-                Expanded(flex: 62, child: _preview(context)),
+                _meter(),
+                const Hairline(),
+                Expanded(child: _preview(context)),
                 const Hairline(),
                 _metrics(),
                 const Hairline(),
+                _status(),
                 _reports(context),
-                const Hairline(),
-                _footer(context),
+                _footer(),
               ],
             );
           },
@@ -79,27 +78,52 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
   // ─── Reports ──────────────────────────────────────────────────────────────
 
   Widget _reports(BuildContext context) {
-    const size = Size.fromHeight(64);
+    const size = Size.fromHeight(BchFrame.actionH);
+    final enabled = controller.isRecording;
     return Padding(
-      padding: const EdgeInsets.all(BchSpace.s3),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(BchSpace.s3, 0, BchSpace.s3, BchSpace.s3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(minimumSize: size, foregroundColor: BchColor.text),
-              icon: const Icon(Icons.sentiment_satisfied_alt),
-              label: const Text('Comfortable'),
-              onPressed: () => _send(context, 'comfortable'),
+          if (!enabled)
+            const Padding(
+              padding: EdgeInsets.only(bottom: BchSpace.s2),
+              child: Text(
+                'Start recording to report how a street feels.',
+                textAlign: TextAlign.center,
+                style: BchType.caption,
+              ),
             ),
-          ),
-          const SizedBox(width: BchSpace.s3),
-          Expanded(
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(minimumSize: size, backgroundColor: BchColor.accent),
-              icon: const Icon(Icons.sentiment_dissatisfied),
-              label: const Text('Uncomfortable'),
-              onPressed: () => _pickReason(context),
-            ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: size,
+                    foregroundColor: BchColor.text,
+                    side: const BorderSide(color: BchColor.divider),
+                    textStyle: BchType.button,
+                  ),
+                  icon: const Icon(Icons.sentiment_satisfied_alt),
+                  label: const Text('Comfortable'),
+                  onPressed: enabled ? () => _send(context, 'comfortable') : null,
+                ),
+              ),
+              const SizedBox(width: BchSpace.s3),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: size,
+                    backgroundColor: BchColor.accent,
+                    foregroundColor: BchColor.bg,
+                    textStyle: BchType.button,
+                  ),
+                  icon: const Icon(Icons.sentiment_dissatisfied),
+                  label: const Text('Uncomfortable'),
+                  onPressed: enabled ? () => _pickReason(context) : null,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -144,19 +168,21 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
 
   Widget _header(BuildContext context) {
     final pending = controller.pendingUploads;
+    final recording = controller.isRecording;
+    final started = controller.startedAt;
+    final session = recording
+        ? 'Recording${started == null ? '' : ' since ${hhmm(started)}'}'
+        : 'Not recording';
     return Container(
       height: BchFrame.headerH,
-      color: BchColor.neutral100,
+      color: recording ? BchColor.live24 : BchColor.surface,
       padding: const EdgeInsets.symmetric(horizontal: BchSpace.s4),
       child: Row(
         children: <Widget>[
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              border: Border.all(color: BchColor.accent, width: 1.5),
-              borderRadius: BchRadius.mdAll,
-            ),
+          LiveDot(
+            active: recording,
+            color: recording ? BchColor.live : BchColor.ink38,
+            size: 16,
           ),
           const SizedBox(width: BchSpace.s3),
           Expanded(
@@ -164,12 +190,15 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text('NIGHT-LIGHT', style: BchType.consoleTitle),
+                const Text('Leerie', style: BchType.consoleTitle),
                 Text(
-                  controller.scanner.label,
+                  deviceModel.isEmpty ? session : '$session · $deviceModel',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: BchType.caption,
+                  style: BchType.caption.copyWith(
+                    color: recording ? BchColor.text : BchColor.ink58,
+                    fontWeight: recording ? FontWeight.w600 : FontWeight.w400,
+                  ),
                 ),
               ],
             ),
@@ -250,7 +279,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  LiveDot(active: ready && controller.settings.cameraDetector),
+                  LiveDot(active: ready),
                   const SizedBox(width: BchSpace.s2),
                   Text(
                     controller.cameraStatus.label,
@@ -260,28 +289,6 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               ),
             ),
           ),
-          if (ready)
-            Positioned(
-              left: BchSpace.s3,
-              bottom: BchSpace.s3,
-              child: _chip(
-                child: Text(
-                  _exposureText(),
-                  style: BchType.caption.copyWith(color: BchColor.ink72),
-                ),
-              ),
-            ),
-          if (ready)
-            Positioned(
-              right: BchSpace.s3,
-              bottom: BchSpace.s3,
-              child: _chip(
-                child: Text(
-                  '${controller.processedFps.round()} frames/s analysed',
-                  style: BchType.caption.copyWith(color: BchColor.ink72),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -316,8 +323,8 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     final status = controller.cameraStatus;
     final detail = switch (status) {
       CameraStatus.denied =>
-        'Camera access was refused. Allow it for Leerie Sensor in Android '
-            'settings, then reopen the app.',
+        'Camera access was refused. Allow it for Leerie in the phone settings, '
+            'then reopen the app.',
       CameraStatus.unavailable =>
         controller.cameraError ?? 'No camera the app can use.',
       CameraStatus.starting => 'Starting the camera.',
@@ -356,207 +363,111 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     );
   }
 
-  // ─── Metrics ──────────────────────────────────────────────────────────────
+  // ─── Light meter and walk ─────────────────────────────────────────────────
 
-  String _exposureText() {
+  Widget _meter() {
     final e = controller.exposure;
-    if (e == null || e.iso == null || e.exposureS == null) return 'No exposure data from camera';
-    return 'ISO ${e.iso!.round()} · 1/${(1 / e.exposureS!).round()} s · f/${e.aperture?.toStringAsFixed(1) ?? '?'}';
+    final hasExposure = e != null && e.iso != null && e.exposureS != null;
+    final cameraReady = controller.cameraStatus == CameraStatus.ready;
+    return LightMeter(
+      luminance: controller.luminance,
+      emptyMessage: cameraReady ? 'No exposure data from camera' : 'Camera not running',
+      detail: hasExposure
+          ? 'ISO ${e.iso!.round()} · 1/${(1 / e.exposureS!).round()} s · '
+              'f/${e.aperture?.toStringAsFixed(1) ?? '?'}'
+          : null,
+    );
   }
 
   Widget _metrics() {
-    final lum = controller.luminance;
+    final started = controller.startedAt;
+    final recording = controller.isRecording;
     return MetricRow(
       cells: <Widget>[
         MetricCell(
-          value: lum == null ? '—' : lum.toStringAsFixed(lum < 10 ? 2 : 0),
-          unit: 'rel.',
-          label: 'Light, not lux',
+          value: recording && started != null
+              ? elapsed(DateTime.now().difference(started))
+              : '—',
+          label: 'Elapsed',
         ),
         MetricCell(
           value: '${controller.readingsRecorded}',
-          label: 'Readings this walk',
+          label: 'Readings',
         ),
         MetricCell(
           value: controller.kmScanned.toStringAsFixed(1),
           unit: 'km',
-          label: 'Scanned',
+          label: 'Walked',
         ),
       ],
     );
   }
 
-  // ─── Sources ──────────────────────────────────────────────────────────────
-
-  Widget _sources() {
-    final settings = controller.settings;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BchSpace.s4,
-        vertical: BchSpace.s2,
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: BchChip(
-              label: 'Camera',
-              selected: settings.cameraDetector,
-              onTap: () {
-                settings.cameraDetector = !settings.cameraDetector;
-                controller.applySettings(settings);
-              },
-            ),
-          ),
-          const SizedBox(width: BchSpace.s2),
-          Expanded(
-            child: BchChip(
-              label: 'Accelerometer',
-              selected: settings.accelDetector,
-              onTap: () {
-                settings.accelDetector = !settings.accelDetector;
-                controller.applySettings(settings);
-              },
-            ),
-          ),
-          const SizedBox(width: BchSpace.s2),
-          Expanded(
-            child: BchChip(
-              label: settings.gating.label,
-              selected: settings.gating == GatingMode.bench,
-              onTap: () {
-                settings.gating = settings.gating == GatingMode.bench
-                    ? GatingMode.onRoad
-                    : GatingMode.bench;
-                controller.applySettings(settings);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Log ──────────────────────────────────────────────────────────────────
-
-  Widget _logHeader() {
-    final count = controller.entries.length;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BchSpace.s4,
-        vertical: BchSpace.s2,
-      ),
-      child: Row(
-        children: <Widget>[
-          Text(
-            'Detection log',
-            style: BchType.caption.copyWith(
-              color: BchColor.text,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              count == 0 ? 'nothing yet' : '$count this session · newest first',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: BchType.caption,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _log() {
-    final entries = controller.entries;
-    if (entries.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(BchSpace.s4),
-        child: PlaceholderBox(
-          message: controller.settings.cameraDetector
-              ? 'No detections yet. The camera is watching the marked region for '
-                  'dark, compact patches that hold across frames.'
-              : 'No detections yet. The camera detector is off; only impacts will '
-                  'be recorded.',
-          height: double.infinity,
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      itemCount: entries.length,
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        return DetectionRow(
-          entry: entry,
-          selected: identical(entry, controller.selected),
-          onTap: () => controller.select(
-            identical(entry, controller.selected) ? null : entry,
-          ),
-        );
-      },
-    );
-  }
-
-  // ─── Footer ───────────────────────────────────────────────────────────────
-
-  Widget _footer(BuildContext context) {
-    final recording = controller.recording;
-    final busy = recording == RecordingState.starting ||
-        recording == RecordingState.stopping;
+  /// What the app is doing, then where the data is: the upload queue and its
+  /// last error. A notice is stated once and dismissed by tapping it.
+  Widget _status() {
     final notice = controller.notice;
-
-    return Container(
-      height: BchFrame.footerH,
-      padding: const EdgeInsets.symmetric(horizontal: BchSpace.s4),
-      child: Row(
+    final pending = controller.pendingUploads;
+    final error = controller.queue.lastError;
+    final uploads = !controller.supabaseConfigured
+        ? 'Supabase is not set: readings stay on the phone.'
+        : pending > 0
+            ? '${plural(pending, 'upload')} waiting'
+            : 'Everything uploaded';
+    return Padding(
+      padding: const EdgeInsets.all(BchSpace.s3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                GestureDetector(
-                  // A notice is stated once and dismissed by reading it.
-                  onTap: notice == null ? null : controller.clearNotice,
-                  behavior: HitTestBehavior.opaque,
-                  child: Text(
-                    notice ?? controller.statusLine,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: BchType.caption.copyWith(
-                      color: notice != null ? BchColor.text : BchColor.ink58,
-                    ),
-                  ),
-                ),
-                if (controller.queue.lastError != null)
-                  Text(
-                    'Last upload error: ${controller.queue.lastError}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: BchType.caption.copyWith(color: BchColor.ink45),
-                  ),
-              ],
+          GestureDetector(
+            onTap: notice == null ? null : controller.clearNotice,
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              notice ?? controller.statusLine,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: BchType.caption.copyWith(
+                color: notice != null ? BchColor.text : BchColor.ink58,
+              ),
             ),
           ),
-          const SizedBox(width: BchSpace.s3),
-          PrimaryButton(
-            label: controller.isRecording ? 'Stop recording' : 'Start recording',
-            busy: busy,
-            onPressed: busy
-                ? null
-                : () {
-                    if (controller.isRecording) {
-                      controller.stopRecording();
-                    } else {
-                      controller.startRecording();
-                    }
-                  },
+          Text(
+            error == null ? uploads : '$uploads · Last upload error: $error',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: BchType.caption.copyWith(
+              color: error == null ? BchColor.ink58 : BchColor.text,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Record ───────────────────────────────────────────────────────────────
+
+  Widget _footer() {
+    final recording = controller.isRecording;
+    final busy = controller.recording == RecordingState.starting ||
+        controller.recording == RecordingState.stopping;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(BchSpace.s3, 0, BchSpace.s3, BchSpace.s3),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(BchFrame.actionH),
+          backgroundColor: recording ? BchColor.live : BchColor.accent,
+          foregroundColor: recording ? BchColor.text : BchColor.bg,
+          textStyle: BchType.action,
+        ),
+        icon: Icon(recording ? Icons.stop_rounded : Icons.fiber_manual_record, size: 28),
+        label: Text(
+          busy
+              ? (controller.recording == RecordingState.stopping ? 'Stopping…' : 'Starting…')
+              : (recording ? 'Stop recording' : 'Start recording'),
+        ),
+        onPressed: busy
+            ? null
+            : (recording ? controller.stopRecording : controller.startRecording),
       ),
     );
   }

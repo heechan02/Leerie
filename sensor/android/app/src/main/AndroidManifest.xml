@@ -20,7 +20,7 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
 
     <application
-        android:label="leerie_sensor"
+        android:label="Leerie"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

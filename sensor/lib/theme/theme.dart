@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'tokens.dart';
 
 ThemeData buildLeerieTheme() {
-  const scheme = ColorScheme.light(
+  const scheme = ColorScheme.dark(
     primary: BchColor.accent,
     onPrimary: BchColor.bg,
     secondary: BchColor.accent700,
@@ -66,11 +66,11 @@ ThemeData buildLeerieTheme() {
       selectionHandleColor: BchColor.accent,
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: BchColor.neutral900,
+      backgroundColor: BchColor.neutral300,
       contentTextStyle: TextStyle(
         fontFamily: BchType.family,
-        fontSize: 13,
-        color: BchColor.bg,
+        fontSize: 15,
+        color: BchColor.text,
       ),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BchRadius.mdAll),
