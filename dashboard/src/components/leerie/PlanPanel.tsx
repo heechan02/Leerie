@@ -64,7 +64,7 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
               {plan.picks.map((p) => (
                 <li key={p.segment_id}><div>
                   <span>{p.name ?? "Unnamed"}</span>
-                  <span className="data secondary">{p.lights} lights · {gbp(p.cost)}</span>
+                  <span className="data secondary">{p.lights} {p.lights === 1 ? "light" : "lights"} · {gbp(p.cost)}</span>
                 </div></li>
               ))}
             </ol>

@@ -212,7 +212,7 @@ a { color: inherit; }
   padding: var(--s3) var(--s4);
   color: var(--ink);
 }
-.lr-hover { width: 320px; pointer-events: none; animation: lr-rise 140ms var(--ease); }
+.lr-hover { width: 320px; pointer-events: none; background: rgb(17 18 38 / 0.95); animation: lr-rise 140ms var(--ease); }
 .lr-hover-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); }
 .lr-hover-name { font-family: var(--font-display); font-size: 22px; font-weight: 500; line-height: 1.15; }
 .lr-score { font-size: 44px; font-weight: 600; line-height: 1; color: var(--amber-hot); }
