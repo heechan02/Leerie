@@ -21,6 +21,7 @@ if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mj
 type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props>;
 
 const CENTER: [number, number] = [-3.181, 55.934]; // between George Square and King's Buildings
+const REFRESH_MS = 60_000; // the pipeline loop rewrites segments.geojson every minute while scanning
 
 /** Real file first, the fake one until Dev B's pipeline writes it. */
 async function loadSegments(): Promise<{ data: Segments; source: string }> {
@@ -50,8 +51,16 @@ export function ScanMap() {
   const drawFrom = useRef<[number, number] | null>(null);
   const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
 
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   useEffect(() => {
-    loadSegments().then(setLoaded, (e: Error) => setError(e.message));
+    const load = () => loadSegments().then(
+      (d) => { setLoaded(d); setUpdatedAt(new Date()); setError(null); },
+      // A failed refresh keeps the last good map; only the first load shows the error.
+      (e: Error) => setError(e.message),
+    );
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => clearInterval(timer);
   }, []);
 
   const plan = useMemo(() => {
@@ -222,6 +231,7 @@ export function ScanMap() {
           {isFake && <p className="lr-warn" role="status" style={{ margin: 0 }}>Placeholder data in use: these are not real readings.</p>}
           <p className="lr-source" style={{ margin: 0 }}>
             <span className="data">data/{loaded?.source ?? "…"}</span> · relative light, not lux
+            {updatedAt && <> · updated {updatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</>}
           </p>
         </footer>
       </aside>

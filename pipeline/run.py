@@ -178,7 +178,10 @@ def main() -> None:
                 "score": score, "score_lo": score_lo,
             },
         })
-    (DATA / "segments.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
+    # Write then rename, so the live dashboard never reads a half-written file.
+    tmp = DATA / "segments.geojson.tmp"
+    tmp.write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
+    tmp.replace(DATA / "segments.geojson")
     print(f"{len(readings)} readings, {len(clean)} clean, {sum(len(v) for s in per.values() for v in s.values())} matched; "
           f"{len(measured)} segments measured, {len(stops) - len(measured)} predicted, {len(incidents)} reports -> data/segments.geojson")
 
