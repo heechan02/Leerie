@@ -13,23 +13,19 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Road-facing camera and the frame stream the vision detector runs on.
+  # Camera frame stream the luminance is measured from.
   camera: ^0.12.0
   # Camera2 backend: unlike the default CameraX one, it reports exposure time, ISO and aperture per frame.
   camera_android: ^0.10.10
-  # Raw accelerometer (gravity included; we estimate and remove it ourselves).
-  sensors_plus: ^6.0.1
-  # Position, speed, heading and GPS accuracy for every detection and breadcrumb.
+  # Position, speed and GPS accuracy for every light reading.
   geolocator: ^13.0.1
-  # PostgREST and Storage are plain HTTP; no Supabase SDK needed for this app.
+  # PostgREST is plain HTTP; no Supabase SDK needed for this app.
   http: ^1.2.2
-  # Detection ids are generated on the phone so the photo path matches the row.
+  # Random session id per walk.
   uuid: ^4.5.1
-  # JPEG encoding of the detection frame, off the UI isolate.
-  image: ^4.3.0
   # Settings that must survive a restart mid-demo.
   shared_preferences: ^2.3.2
-  # A dash-mounted phone must not sleep while it is recording.
+  # The phone must not sleep while it is recording.
   wakelock_plus: ^1.2.8
 
 dev_dependencies:

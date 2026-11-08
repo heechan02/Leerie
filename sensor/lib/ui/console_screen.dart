@@ -5,12 +5,9 @@
 
 import 'package:flutter/material.dart';
 
-import '../config.dart';
 import '../core/format.dart';
-import '../core/geo.dart';
 import '../data/models.dart';
 import '../session/session_controller.dart';
-import '../session/settings.dart';
 import '../theme/tokens.dart';
 import 'preview_surface.dart';
 import 'settings_sheet.dart';
@@ -298,15 +295,13 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           // analyser promotes it to non-null inside the branch.
           if (camera != null && ready)
             GestureDetector(
-              onTap: () => _openRoadView(context),
+              onTap: () => Navigator.of(context).push<void>(MaterialPageRoute<void>(
+                builder: (_) => CameraFullscreen(controller: controller),
+              )),
               child: Semantics(
                 button: true,
-                label: 'Camera view. Tap to open the full road view.',
-                child: PreviewSurface(
-                controller: controller,
-                camera: camera,
-                coordinate: _coordinate(),
-                ),
+                label: 'Camera view. Tap for full screen.',
+                child: PreviewSurface(controller: controller, camera: camera),
               ),
             )
           else
@@ -329,31 +324,6 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Where the detection would be placed if one fired now. Printed at the
-  /// margin beside a fired mark, the way the console prints a linked pin's
-  /// coordinate.
-  String? _coordinate() {
-    final position = controller.lastPosition;
-    if (position != null) {
-      return formatCoordinate(position.latitude, position.longitude);
-    }
-    return controller.settings.gating == GatingMode.bench
-        ? formatCoordinate(benchFallbackLat, benchFallbackLng)
-        : null;
-  }
-
-  Future<void> _openRoadView(BuildContext context, {bool tuning = false}) {
-    return Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => RoadViewScreen(
-          controller: controller,
-          coordinate: _coordinate(),
-          tuning: tuning,
-        ),
       ),
     );
   }

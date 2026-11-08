@@ -1,13 +1,9 @@
 // PostgREST and Storage over plain HTTP. docs/ARCHITECTURE.md §3.
 //
-// No Supabase SDK: the app writes four shapes to two tables and one bucket, and
-// the anon key goes in a header. Geography is sent as EWKT, longitude first.
-//
-// RLS is wide open for the demo (`demo_all` policies), which is why the anon key
-// is enough. That is a property of the demo, not of the design.
+// No Supabase SDK: the app writes two tables, and the anon key goes in a header.
+// Geography is sent as EWKT, longitude first. RLS lets anon insert and nothing else.
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -67,49 +63,6 @@ class SupabaseRest {
 
   String get _base => config.url.trim().replaceAll(RegExp(r'/+$'), '');
 
-  /// Start a recording session. Returns the new trip id.
-  Future<String> createTrip({
-    required String deviceId,
-    required String scannerId,
-  }) async {
-    final response = await _client
-        .post(
-          Uri.parse('$_base/rest/v1/trips'),
-          headers: <String, String>{..._headers, 'Prefer': 'return=representation'},
-          body: jsonEncode(<String, dynamic>{
-            'device_id': deviceId,
-            'scanner_id': scannerId,
-          }),
-        )
-        .timeout(_timeout);
-
-    if (response.statusCode >= 300) {
-      throw SupabaseException('Start trip', response.statusCode, response.body);
-    }
-    final rows = jsonDecode(response.body) as List<dynamic>;
-    if (rows.isEmpty) {
-      throw SupabaseException('Start trip', response.statusCode, 'no row returned');
-    }
-    return (rows.first as Map<String, dynamic>)['id'] as String;
-  }
-
-  Future<void> endTrip(String tripId, {double? distanceM}) async {
-    final response = await _client
-        .patch(
-          Uri.parse('$_base/rest/v1/trips?id=eq.$tripId'),
-          headers: _headers,
-          body: jsonEncode(<String, dynamic>{
-            'ended_at': DateTime.now().toUtc().toIso8601String(),
-            if (distanceM != null) 'distance_m': distanceM,
-          }),
-        )
-        .timeout(_timeout);
-
-    if (response.statusCode >= 300) {
-      throw SupabaseException('End trip', response.statusCode, response.body);
-    }
-  }
-
   /// A batch of 1 Hz light readings.
   Future<void> postPositions(List<Breadcrumb> batch, {required String sessionId}) async {
     if (batch.isEmpty) return;
@@ -138,49 +91,6 @@ class SupabaseRest {
     if (response.statusCode >= 300) {
       throw SupabaseException('Post report', response.statusCode, response.body);
     }
-  }
-
-  /// The whole write path. The trigger does the rest: clustering, corroboration
-  /// and `hazard_id` on the way in.
-  Future<void> postDetection(
-    DetectionRecord record, {
-    required String deviceId,
-    required String scannerId,
-  }) async {
-    final response = await _client
-        .post(
-          Uri.parse('$_base/rest/v1/detections'),
-          headers: _headers,
-          body: jsonEncode(record.toJson(deviceId: deviceId, scannerId: scannerId)),
-        )
-        .timeout(_timeout);
-
-    if (response.statusCode >= 300) {
-      throw SupabaseException('Post detection', response.statusCode, response.body);
-    }
-  }
-
-  /// The detection id is generated on the phone so this path matches the row.
-  /// Returns the public URL, which the bucket serves without a token.
-  Future<String> uploadPhoto(String detectionId, Uint8List bytes) async {
-    final path = '$photoBucket/$detectionId.jpg';
-    final response = await _client
-        .post(
-          Uri.parse('$_base/storage/v1/object/$path'),
-          headers: <String, String>{
-            'apikey': config.anonKey,
-            'Authorization': 'Bearer ${config.anonKey}',
-            'Content-Type': 'image/jpeg',
-            'x-upsert': 'true',
-          },
-          body: bytes,
-        )
-        .timeout(_timeout);
-
-    if (response.statusCode >= 300) {
-      throw SupabaseException('Upload photo', response.statusCode, response.body);
-    }
-    return '$_base/storage/v1/object/public/$path';
   }
 
   /// One cheap round trip, to tell "the key is wrong" from "there is no signal"

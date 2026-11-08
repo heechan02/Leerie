@@ -1,5 +1,4 @@
-// A scanner drives through places with no signal, and a detection lost to a dead
-// spot is a hazard nobody repairs. Everything bound for Supabase goes through
+// A walk goes through places with no signal. Everything bound for Supabase goes through
 // this queue: one job at a time, in order, retried with a backoff, and counted in
 // the header so the operator can see the phone is behind rather than broken.
 //
@@ -17,8 +16,7 @@ import 'supabase_rest.dart';
 abstract class UploadJob {
   int attempts = 0;
 
-  /// Give up after this many failures. Detections are worth more retries than
-  /// breadcrumbs, which are only there to draw a line on a map.
+  /// Give up after this many failures. Reports are worth more retries than a batch of readings.
   int get maxAttempts;
 
   String get describe;
@@ -26,50 +24,6 @@ abstract class UploadJob {
   Future<void> run(SupabaseRest rest);
 
   void onGaveUp() {}
-}
-
-class DetectionJob extends UploadJob {
-  DetectionJob({
-    required this.record,
-    required this.deviceId,
-    required this.scannerId,
-    required this.onState,
-  });
-
-  final DetectionRecord record;
-  final String deviceId;
-  final String scannerId;
-  final void Function(UploadState state) onState;
-
-  @override
-  int get maxAttempts => 8;
-
-  @override
-  String get describe => 'Detection ${record.id.substring(0, 8)}';
-
-  @override
-  Future<void> run(SupabaseRest rest) async {
-    onState(UploadState.sending);
-
-    // The photo goes first so the row can carry its URL, but a photo that will
-    // not upload must not hold back the evidence.
-    final bytes = record.photoBytes;
-    if (bytes != null && record.photoUrl == null) {
-      try {
-        // The bytes are kept, not dropped: the inspector shows the frame the
-        // detector fired on, and `photoUrl` is what stops a second upload.
-        record.photoUrl = await rest.uploadPhoto(record.id, bytes);
-      } on Object catch (error) {
-        debugPrint('Leerie: photo upload failed, posting without it. $error');
-      }
-    }
-
-    await rest.postDetection(record, deviceId: deviceId, scannerId: scannerId);
-    onState(UploadState.uploaded);
-  }
-
-  @override
-  void onGaveUp() => onState(UploadState.failed);
 }
 
 class PositionsJob extends UploadJob {
@@ -104,22 +58,6 @@ class IncidentJob extends UploadJob {
   Future<void> run(SupabaseRest rest) => rest.postIncident(incident);
 }
 
-class TripEndJob extends UploadJob {
-  TripEndJob({required this.tripId, required this.distanceM});
-
-  final String tripId;
-  final double distanceM;
-
-  @override
-  int get maxAttempts => 4;
-
-  @override
-  String get describe => 'Trip end';
-
-  @override
-  Future<void> run(SupabaseRest rest) => rest.endTrip(tripId, distanceM: distanceM);
-}
-
 class UploadQueue extends ChangeNotifier {
   UploadQueue({SupabaseRest? rest}) : _rest = rest;
 
@@ -145,7 +83,6 @@ class UploadQueue extends ChangeNotifier {
 
   void add(UploadJob job) {
     _jobs.add(job);
-    if (job is DetectionJob) job.onState(UploadState.queued);
     notifyListeners();
     unawaited(_pump());
   }

@@ -1,10 +1,7 @@
 // Leerie scanner. A phone carried on a night walk measures exposure-corrected
 // light through the camera, tags it with GPS, and writes it straight to Supabase.
 //
-// Portrait only, on purpose: the frames the detector works on arrive in sensor
-// orientation and have to be rotated into the operator's view before the region
-// of interest means anything. Locking the orientation keeps that one rotation
-// honest, and a portrait windscreen cradle sees further down the road anyway.
+// Portrait only: the console is laid out for one hand on a walk.
 
 import 'dart:async';
 
@@ -69,8 +66,8 @@ class _LeerieAppState extends State<LeerieApp> {
       theme: buildLeerieTheme(),
       home: ConsoleScreen(controller: widget.controller),
       builder: (context, child) {
-        // The console is read at arm's length in a moving scanner; it does not
-        // reflow, so cap the text scale rather than let rows collide.
+        // The console is read at arm's length on a walk; it does not reflow,
+        // so cap the text scale rather than let rows collide.
         final media = MediaQuery.of(context);
         return MediaQuery(
           data: media.copyWith(

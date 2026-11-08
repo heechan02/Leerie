@@ -7,7 +7,7 @@ String hhmmss(DateTime t) => '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
 
 String hhmm(DateTime t) => '${two(t.hour)}:${two(t.minute)}';
 
-/// "3 scanners" / "1 scanner" — measurement first, and never "1 scanners".
+/// "3 uploads" / "1 upload" — measurement first, and never "1 uploads".
 String plural(int count, String singular, [String? pluralForm]) =>
     '$count ${count == 1 ? singular : (pluralForm ?? '${singular}s')}';
 
