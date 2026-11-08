@@ -16,14 +16,19 @@ export const MAP_FALLBACK = {
   ruleSoft: "#e4e2e0",
 } as const;
 
-/** Leerie's night map: rail-navy ground, streets ramp from dim (low score) to lamp yellow (high). */
+/** Leerie's night map: dusk ground, streets ramp from violet (low score) to sodium amber (high). */
 export const NIGHT = {
-  ground: "#0b1e33", // --rail
-  ink: "#ffffff", // --rail-ink
-  water: "#16304a", // --rail-2
-  dim: "#24435f", // --rail-rule
-  mid: "#a8bdd1", // --rail-ink-2
-  lit: "#ffdd00", // --focus
+  ground: "#0b0d1a", // --night
+  ink: "#ece8f4", // --ink
+  water: "#15172e", // --dusk
+  dim: "#3a3766", // a step above --dusk-3, so dark streets still show
+  mid: "#a9a6c4", // --ink-2
+  lit: "#ffd27a", // --amber-hot
+  lamp: "#f5b54a", // --amber
+  hotLow: "#ff7a5c", // --hot-low
+  hotHigh: "#c2185b", // --hot-high
+  picked: "#ffffff", // Light first: white-hot, off the score ramp
+  scan: "#b9a8ff", // Scan next: lavender, off the score ramp
 } as const;
 
 export interface MapTokens {

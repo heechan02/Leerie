@@ -8,6 +8,8 @@ export type PlanSegment = {
   L: number | null; R: number; C: number | null;
   brightness_stops: number | null; brightness_lo: number | null; brightness_hi: number | null;
   usage?: number | null; inspect?: boolean;
+  /** Council lamp asset IDs within 20 m, for the Inspect first list. */
+  lamp_refs?: string[];
 };
 export type PlanFeature = GeoJSON.Feature<GeoJSON.LineString, PlanSegment>;
 /** [west, south, east, north] */
@@ -20,7 +22,7 @@ export type Plan = {
   picks: Pick[]; spend: number;
   /** Length-weighted mean score of the scored streets in the box, before and after the picks. */
   scoreBefore: number | null; scoreAfter: number | null;
-  scanNext: ScanNext[]; inspect: { segment_id: string; name: string | null }[];
+  scanNext: ScanNext[]; inspect: { segment_id: string; name: string | null; lamp_refs: string[] }[];
 };
 
 /** A lit street reaches the upper quartile of light rank: "a typical well-lit street". */
@@ -109,6 +111,6 @@ export function plan(features: PlanFeature[], box: Box, input: PlanInput): Plan 
     scoreBefore: meanScore(segs, weights, new Set()),
     scoreAfter: meanScore(segs, weights, new Set(picks.map((p) => p.segment_id))),
     scanNext,
-    inspect: segs.filter((p) => p.inspect).map((p) => ({ segment_id: p.segment_id, name: p.name })),
+    inspect: segs.filter((p) => p.inspect).map((p) => ({ segment_id: p.segment_id, name: p.name, lamp_refs: p.lamp_refs ?? [] })),
   };
 }

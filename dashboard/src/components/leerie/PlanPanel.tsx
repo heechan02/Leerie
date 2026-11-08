@@ -28,10 +28,10 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
   plan: Plan | null; hasBox: boolean; inputs: PlanInputs;
   onInputs: (i: PlanInputs) => void; onClearBox: () => void;
 }) {
-  const field = (key: keyof PlanInputs, label: string) => (
+  const field = (key: keyof PlanInputs, label: string, example: string) => (
     <label className="lr-field">
       {label}
-      <input className="data" type="number" min={0} inputMode="decimal" value={inputs[key]}
+      <input className="data" type="number" min={0} inputMode="decimal" placeholder={example} value={inputs[key]}
         onChange={(e) => onInputs({ ...inputs, [key]: e.target.value })} />
     </label>
   );
@@ -44,9 +44,9 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
         : <p className="secondary lr-hint">Drag on the map to draw a box.</p>}
 
       <div className="lr-fields">
-        {field("budget", "Budget (£)")}
-        {field("costPerLight", "Cost per light (£)")}
-        {field("spacingM", "Light spacing (m)")}
+        {field("budget", "Budget (£)", "e.g. 50000")}
+        {field("costPerLight", "Cost per light (£)", "e.g. 2000")}
+        {field("spacingM", "Light spacing (m)", "e.g. 30")}
       </div>
 
       {plan && (
@@ -62,14 +62,14 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
           {plan.picks.length === 0 ? <p className="secondary lr-hint">Nothing fits this budget.</p> : (
             <ol className="lr-list">
               {plan.picks.map((p) => (
-                <li key={p.segment_id}>
+                <li key={p.segment_id}><div>
                   <span>{p.name ?? "Unnamed"}</span>
-                  <span className="data secondary">{p.lights} × · {gbp(p.cost)}</span>
-                </li>
+                  <span className="data secondary">{p.lights} lights · {gbp(p.cost)}</span>
+                </div></li>
               ))}
             </ol>
           )}
-          <button type="button" className="lr-button" disabled={plan.picks.length === 0}
+          <button type="button" className="lr-button" style={{ width: "100%" }} disabled={plan.picks.length === 0}
             onClick={() => downloadWorksOrder(plan, inputs)}>
             Download works order (CSV)
           </button>
@@ -78,18 +78,25 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
           {plan.scanNext.length === 0 ? <p className="secondary lr-hint">No uncertain predicted streets here.</p> : (
             <ol className="lr-list">
               {plan.scanNext.map((s) => (
-                <li key={s.segment_id}>
+                <li key={s.segment_id}><div>
                   <span>{s.name ?? "Unnamed"}</span>
-                  <span className="data secondary">{Math.round(s.pDark * 100)}% dark</span>
-                </li>
+                  <span className="data secondary">{Math.round(s.pDark * 100)}% likely dark</span>
+                </div></li>
               ))}
             </ol>
           )}
 
           {plan.inspect.length > 0 && (
             <>
-              <h2 className="micro">Inspect first</h2>
-              <ul className="lr-list">{plan.inspect.map((s) => <li key={s.segment_id}>{s.name ?? "Unnamed"}</li>)}</ul>
+              <h2 className="micro">Inspect first · lamped but dark</h2>
+              <ul className="lr-list">
+                {plan.inspect.map((s) => (
+                  <li key={s.segment_id}>
+                    {s.name ?? "Unnamed"}
+                    {s.lamp_refs.length > 0 && <span className="lr-refs data">Lamps {s.lamp_refs.join(", ")}</span>}
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </>

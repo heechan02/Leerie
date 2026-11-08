@@ -2,6 +2,7 @@
 // The scan map: every street segment from data/segments.geojson, coloured by score,
 // measured streets solid and predicted ones faded. Hover a street for its breakdown.
 // Plan mode: drag a box, enter budget and costs, and the planner picks the streets to light.
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Source, ScaleControl, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
@@ -34,9 +35,8 @@ async function loadSegments(): Promise<{ data: Segments; source: string }> {
 
 type Hover = { street: Props; x: number; y: number; width: number; height: number };
 type Mode = "map" | "plan";
-const PICKED = "#7fd4ff"; // streets to light: not on the score ramp, so they stand out from it
-// Report clusters: orange to deep red by count. Not yellow, which already means well lit here.
-const HOT_LOW = "#f08a24", HOT_HIGH = "#b3121f";
+// Streets to light are white-hot with an amber halo, so they stand out from the amber end of the score ramp.
+const { picked: PICKED, scan: SCAN } = NIGHT;
 
 /** One point per street that two or more walks reported, at its middle vertex: per-street, never raw taps. */
 function confirmedHotspots(fs: Segments["features"]): GeoJSON.FeatureCollection<GeoJSON.Point, { count: number }> {
@@ -65,6 +65,7 @@ export function ScanMap() {
   const [box, setBox] = useState<Box | null>(null);
   const drawFrom = useRef<[number, number] | null>(null);
   const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
+  const [showLamps, setShowLamps] = useState(true);
 
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   useEffect(() => {
@@ -121,7 +122,7 @@ export function ScanMap() {
     const pts = (focus.length ? focus : fs.filter((f) => f.properties.L != null)).flatMap((f) => f.geometry.coordinates);
     if (!pts.length) return;
     const lngs = pts.map((p) => p[0]), lats = pts.map((p) => p[1]);
-    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 60, maxZoom: 17, duration: 0 });
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: fitPadding(), maxZoom: 17, duration: 0 });
     fitted.current = true;
   }, [loaded, mapReady]);
 
@@ -147,7 +148,7 @@ export function ScanMap() {
   const isFake = loaded?.source.includes("fake") ?? false;
 
   return (
-    <main className="night">
+    <main className="lr-app">
       <section className="lr-map" aria-label="Map of streets coloured by score">
         <Map
           ref={mapRef}
@@ -183,18 +184,30 @@ export function ScanMap() {
               {/* Opacity 0.01, not 0: MapLibre skips fully transparent layers when querying. */}
               <Layer id="segments-hit" type="line" paint={{ "line-width": 12, "line-opacity": 0.01 }} />
               <Layer id="segments-scan" type="line" filter={["==", ["get", "_scan"], true]}
-                paint={{ "line-color": PICKED, "line-width": 4, "line-dasharray": [1, 1.5] }} />
+                paint={{ "line-color": SCAN, "line-width": 4, "line-dasharray": [1, 1.5] }} />
+              <Layer id="segments-picked-glow" type="line" filter={["==", ["get", "_picked"], true]}
+                layout={{ "line-cap": "round" }} paint={{ "line-color": NIGHT.lamp, "line-width": 16, "line-blur": 10, "line-opacity": 0.7 }} />
               <Layer id="segments-picked" type="line" filter={["==", ["get", "_picked"], true]}
-                layout={{ "line-cap": "round" }} paint={{ "line-color": PICKED, "line-width": 6 }} />
+                layout={{ "line-cap": "round" }} paint={{ "line-color": PICKED, "line-width": 4 }} />
             </Source>
           )}
+          {/* Council lamp columns: MapLibre fetches the file itself, only drawn when zoomed in. */}
+          <Source id="lamps" type="geojson" data="/data/lamps.geojson">
+            <Layer id="lamps-glow" type="circle" minzoom={14} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+              "circle-color": NIGHT.lamp, "circle-blur": 1, "circle-opacity": 0.35,
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 4, 18, 14],
+            }} />
+            <Layer id="lamps-dot" type="circle" minzoom={14} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+              "circle-color": NIGHT.lit, "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 1, 18, 3],
+            }} />
+          </Source>
           {hotspots && (
             <Source id="hotspots" type="geojson" data={hotspots} cluster clusterRadius={40}
               clusterProperties={{ count: ["+", ["get", "count"]] }}>
               <Layer id="hotspots-circle" type="circle" paint={{
-                "circle-color": ["interpolate", ["linear"], ["get", "count"], 1, HOT_LOW, 20, HOT_HIGH],
+                "circle-color": ["interpolate", ["linear"], ["get", "count"], 1, NIGHT.hotLow, 20, NIGHT.hotHigh],
                 "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 11, 20, 22],
-                "circle-stroke-color": "#0b1526", "circle-stroke-width": 2, "circle-opacity": 0.92,
+                "circle-stroke-color": NIGHT.ground, "circle-stroke-width": 2, "circle-opacity": 0.92,
               }} />
               <Layer id="hotspots-count" type="symbol" layout={{
                 "text-field": ["to-string", ["get", "count"]], "text-font": ["Noto Sans Bold"], "text-size": 13,
@@ -204,17 +217,17 @@ export function ScanMap() {
           )}
           {mode === "plan" && box && (
             <Source id="plan-box" type="geojson" data={boxPolygon(box)}>
-              <Layer id="plan-box-fill" type="fill" paint={{ "fill-color": PICKED, "fill-opacity": 0.06 }} />
-              <Layer id="plan-box-line" type="line" paint={{ "line-color": PICKED, "line-width": 1.5, "line-dasharray": [2, 2] }} />
+              <Layer id="plan-box-fill" type="fill" paint={{ "fill-color": NIGHT.lamp, "fill-opacity": 0.06 }} />
+              <Layer id="plan-box-line" type="line" paint={{ "line-color": NIGHT.lit, "line-width": 1.5, "line-dasharray": [2, 2] }} />
             </Source>
           )}
-          <NavigationControl position="top-right" showZoom={false} visualizePitch={false} />
+          <NavigationControl position="top-left" showZoom={false} visualizePitch={false} />
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
-        <Legend />
+        <Legend mode={mode} showLamps={showLamps} />
         {hover && <HoverCard {...hover} weights={weights} />}
         {!loaded && (
-          <div className="lr-card lr-status" role={error ? "alert" : "status"}>
+          <div className="lr-card lr-glass lr-status" role={error ? "alert" : "status"}>
             {error ? (
               <>
                 <strong>Could not load street data</strong>
@@ -227,15 +240,15 @@ export function ScanMap() {
         )}
       </section>
 
-      <aside className="lr-panel">
-        <header>
-          <div className="lr-brand">
-            <span className="lr-lamp" aria-hidden />
-            <h1 style={{ fontSize: "var(--t-title)", letterSpacing: "-0.01em" }}>Leerie</h1>
-          </div>
-          <p className="micro secondary" style={{ marginTop: "var(--s2)" }}>Edinburgh · George Square to King&apos;s Buildings</p>
-        </header>
+      <header className="lr-topbar lr-glass">
+        <Link href="/" className="lr-wordmark" aria-label="Leerie home"><span className="lr-lamp" aria-hidden /><span>Leerie</span></Link>
+        <span className="lr-place">Edinburgh · George Square to King&apos;s Buildings</span>
+        {updatedAt && (
+          <span className="lr-live data"><i aria-hidden />updated {updatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+        )}
+      </header>
 
+      <aside className="lr-panel lr-glass" aria-label="Controls">
         <div className="lr-tabs" role="tablist" aria-label="View">
           {(["map", "plan"] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className="lr-tab"
@@ -245,28 +258,47 @@ export function ScanMap() {
           ))}
         </div>
 
+        <p className="lr-panel-intro">
+          {mode === "map"
+            ? "Each street is coloured by how much light reaches the pavement at night. Hover one to see why it scored that way."
+            : "Draw a box over the area you are responsible for, then enter your budget."}
+        </p>
+
         <section className="lr-stats" aria-label="Coverage" aria-busy={!loaded}>
           <StatCard value={String(counts.measured)} label="streets measured" loading={!loaded} />
           <StatCard value={String(counts.predicted)} label="streets predicted" loading={!loaded} />
-          <StatCard value={counts.km.toFixed(1)} label="km measured" loading={!loaded} />
+          <StatCard value={counts.km.toFixed(1)} label="km walked" loading={!loaded} />
         </section>
 
         {mode === "plan" && (
           <PlanPanel plan={plan} hasBox={box != null} inputs={inputs} onInputs={setInputs} onClearBox={() => setBox(null)} />
         )}
 
+        <section aria-labelledby="layers-h">
+          <h2 id="layers-h" className="micro">Layers</h2>
+          <label className="lr-toggle">
+            <span>Council lamp posts<small>City of Edinburgh Council lighting columns, zoom in to see them</small></span>
+            <input type="checkbox" checked={showLamps} onChange={(e) => setShowLamps(e.target.checked)} />
+          </label>
+        </section>
+
         <WeightSliders weights={weights} onChange={setWeights} />
 
         <footer style={{ display: "grid", gap: "var(--s2)" }}>
-          {isFake && <p className="lr-warn" role="status" style={{ margin: 0 }}>Placeholder data in use: these are not real readings.</p>}
-          <p className="lr-source" style={{ margin: 0 }}>
+          {isFake && <p className="lr-warn" role="status">Placeholder data in use: these are not real readings.</p>}
+          <p className="lr-source">
             <span className="data">data/{loaded?.source ?? "…"}</span> · relative light, not lux
-            {updatedAt && <> · updated {updatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</>}
           </p>
         </footer>
       </aside>
     </main>
   );
+}
+
+/** Keep the streets clear of the floating panel on wide screens. */
+function fitPadding() {
+  const wide = typeof window !== "undefined" && window.innerWidth > 860;
+  return { top: 90, bottom: 60, left: 60, right: wide ? 450 : 40 };
 }
 
 function StatCard({ value, label, loading }: { value: string; label: string; loading: boolean }) {

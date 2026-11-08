@@ -1,5 +1,5 @@
-import { ScanMap } from "@/components/leerie/ScanMap";
+import { Landing } from "@/components/landing/Landing";
 
 export default function Page() {
-  return <ScanMap />;
+  return <Landing />;
 }

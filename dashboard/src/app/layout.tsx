@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
-import { Public_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, Public_Sans } from "next/font/google";
 import "./globals.css";
+
+/** Headlines: a soft old-style serif, like a lamplit street sign. */
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
 
 /** A government-commissioned face, openly licensed. Carries the interface. */
 const publicSans = Public_Sans({
@@ -18,14 +25,14 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Leerie, measured night light on Edinburgh streets",
+  title: "Leerie",
   description:
     "Street-level night light measured by phones, predicted for unwalked streets, and turned into safer routes and a lighting plan.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-GB" className={`${publicSans.variable} ${plexMono.variable}`}>
+    <html lang="en-GB" className={`${fraunces.variable} ${publicSans.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

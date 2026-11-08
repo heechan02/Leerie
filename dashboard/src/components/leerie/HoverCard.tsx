@@ -3,7 +3,7 @@ import { score, type Weights } from "./score";
 import type { SegmentProps } from "./types";
 
 const CARD_W = 320;
-const CARD_H = 330; // rough height, only used to keep the card on screen
+const CARD_H = 360; // rough height, only used to keep the card on screen
 const GAP = 16;
 
 const stops = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}`);
@@ -23,7 +23,7 @@ export function HoverCard({ street, weights, x, y, width, height }: Props) {
   ];
 
   return (
-    <div className="lr-card lr-hover" style={{ left, top }}>
+    <div className="lr-card lr-glass lr-hover" style={{ left, top }}>
       <div className="lr-hover-head">
         <div>
           <div className="lr-hover-name">{street.name ?? "Unnamed street"}</div>
@@ -61,6 +61,12 @@ export function HoverCard({ street, weights, x, y, width, height }: Props) {
         <span className="secondary"> (80%: <span className="data">{stops(street.brightness_lo)} to {stops(street.brightness_hi)}</span>)</span>
       </p>
       <p className="lr-line secondary" style={{ fontSize: "var(--t-micro)" }}>vs median street · +1 = 2× light</p>
+      {street.nearest_lamp_m != null && (
+        <p className="lr-line">
+          Council lamps <span className="data">{(street.lamps_per_100m ?? 0).toFixed(1)}</span> per 100 m
+          <span className="secondary"> · nearest <span className="data">{Math.round(street.nearest_lamp_m)} m</span></span>
+        </p>
+      )}
     </div>
   );
 }
