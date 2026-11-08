@@ -1,8 +1,8 @@
 "use client";
 // The scan map: every street segment from data/segments.geojson, coloured by score,
 // measured streets solid and predicted ones faded. Hover a street for its breakdown.
-import { useEffect, useMemo, useState } from "react";
-import Map, { Layer, Source, ScaleControl, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Map, { Layer, Source, ScaleControl, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { buildMapStyle } from "@/lib/map/style";
@@ -38,6 +38,8 @@ export function ScanMap() {
   const [error, setError] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [hover, setHover] = useState<Props | null>(null);
+  const mapRef = useRef<MapRef>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     loadSegments().then(setLoaded, (e: Error) => setError(e.message));
@@ -66,6 +68,20 @@ export function ScanMap() {
     };
   }, [loaded]);
 
+  // Open on the streets that have data: measured ones, else anything with an estimate.
+  const fitted = useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!loaded || !mapReady || !map || fitted.current) return;
+    const fs = loaded.data.features;
+    const focus = fs.filter((f) => f.properties.measured);
+    const pts = (focus.length ? focus : fs.filter((f) => f.properties.L != null)).flatMap((f) => f.geometry.coordinates);
+    if (!pts.length) return;
+    const lngs = pts.map((p) => p[0]), lats = pts.map((p) => p[1]);
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 60, maxZoom: 17, duration: 0 });
+    fitted.current = true;
+  }, [loaded, mapReady]);
+
   const onHover = (e: MapLayerMouseEvent) => {
     const f = e.features?.[0];
     setHover(f ? (f.properties as Props) : null);
@@ -76,6 +92,8 @@ export function ScanMap() {
     <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", height: "100vh" }}>
       <section style={{ position: "relative", minWidth: 0, background: NIGHT.ground }}>
         <Map
+          ref={mapRef}
+          onLoad={() => setMapReady(true)}
           initialViewState={{ longitude: CENTER[0], latitude: CENTER[1], zoom: 14.3 }}
           mapStyle={style}
           style={{ position: "absolute", inset: 0 }}
