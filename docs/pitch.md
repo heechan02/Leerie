@@ -80,3 +80,4 @@ Have three things open: the landing page at the top, `/map` in a second tab, and
 >
 > **Limits.** Brightness is relative, not lux. Predictions are a neighbour average, not yet a trained model. Area crime (SIMD) is not in the score yet. A brighter street is not a promise of safety.
 >
+> **Disclosure.** The landing page image was generated with Higgsfield.

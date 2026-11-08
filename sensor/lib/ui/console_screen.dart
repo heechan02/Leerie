@@ -272,16 +272,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
       context: context,
       isScrollControlled: true,
       backgroundColor: BchColor.surface,
-      builder: (sheetContext) => SettingsSheet(
-        controller: controller,
-        // Close the sheet first: the road view is the thing being aimed at, and
-        // leaving the sheet on the stack under it would send Back to the wrong
-        // screen.
-        onAim: () {
-          Navigator.of(sheetContext).pop();
-          _openRoadView(context, tuning: true);
-        },
-      ),
+      builder: (_) => SettingsSheet(controller: controller),
     );
   }
 

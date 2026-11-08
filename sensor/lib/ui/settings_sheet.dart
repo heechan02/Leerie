@@ -1,28 +1,17 @@
-// Everything the operator can change, in the order they will want it: which
-// phone this is, what the discard rules are, where the rows go, and how fussy
-// the two detectors should be.
-//
-// Changes apply as they are made, because the region of interest is drawn live
-// over the road and dragging a slider blind would be no use in a cradle.
+// Where the readings go. Everything else is fixed at build time.
 
 import 'package:flutter/material.dart';
 
-import '../config.dart';
-import '../core/format.dart';
 import '../session/session_controller.dart';
 import '../session/settings.dart';
 import '../theme/tokens.dart';
 import 'widgets/console_widgets.dart';
 
 class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({super.key, required this.controller, this.onAim});
+  const SettingsSheet({super.key, required this.controller});
 
   final SessionController controller;
 
-  /// Closes the sheet and opens the road view with the tuning panel up. The
-  /// region of interest cannot be aimed from here — the console preview crops
-  /// away the part of the frame the horizon sits in.
-  final VoidCallback? onAim;
 
   @override
   State<SettingsSheet> createState() => _SettingsSheetState();
@@ -66,7 +55,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final recording = widget.controller.isRecording;
 
     return Padding(
       padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
@@ -77,109 +65,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _section('Scanner', <Widget>[
-                Row(
-                  children: <Widget>[
-                    for (var i = 0; i < demoScanners.length; i++) ...<Widget>[
-                      if (i > 0) const SizedBox(width: BchSpace.s2),
-                      Expanded(
-                        child: BchChip(
-                          label: demoScanners[i].label,
-                          selected: _settings.scannerIndex == i,
-                          enabled: !recording,
-                          onTap: () {
-                            _settings.scannerIndex = i;
-                            _apply();
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: BchSpace.s2),
-                Text(
-                  recording
-                      ? 'Locked while a trip is recording. Stop the trip to change it.'
-                      : 'The two phones must not share a pair. Confirmation needs a '
-                          'second distinct scanner over the same hole.',
-                  style: BchType.caption,
-                ),
-              ]),
-
-              _section('Discard rules', <Widget>[
-                Row(
-                  children: <Widget>[
-                    for (final mode in GatingMode.values) ...<Widget>[
-                      if (mode.index > 0) const SizedBox(width: BchSpace.s2),
-                      Expanded(
-                        child: BchChip(
-                          label: mode.label,
-                          selected: _settings.gating == mode,
-                          onTap: () {
-                            _settings.gating = mode;
-                            _apply();
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: BchSpace.s2),
-                Text(_settings.gating.detail, style: BchType.caption),
-              ]),
-
-              _section('Camera detector', <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Horizon ${percent(_settings.horizonFrac)} · '
-                        'centre ${percent(_settings.centerXFrac)} · '
-                        'sensitivity ${percent(_settings.visionSensitivity)}',
-                        style: BchType.body,
-                      ),
-                    ),
-                    const SizedBox(width: BchSpace.s2),
-                    SecondaryButton(
-                      label: 'Aim in road view',
-                      icon: Icons.crop_free,
-                      onPressed: widget.onAim,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: BchSpace.s2),
-                // These are set over the uncropped frame, not here. The console
-                // panel shows only the bottom of the frame, so the horizon line
-                // sits above its crop and dragging a slider here moved a mark
-                // that could not be seen.
-                const Text(
-                  'The region is aimed in the road view, where the whole frame '
-                  'is drawn and the marked region moves as you drag. Raise the '
-                  'horizon until no sky or verge is inside it.',
-                  style: BchType.caption,
-                ),
-              ]),
-
-              _section('Accelerometer detector', <Widget>[
-                _slider(
-                  label: 'Impact threshold',
-                  value: _settings.accelThreshold,
-                  min: 1.0,
-                  max: 6.0,
-                  readout: '${_settings.accelThreshold.toStringAsFixed(1)} m/s²',
-                  onChanged: (v) {
-                    _settings.accelThreshold = v;
-                    _apply();
-                  },
-                ),
-                const SizedBox(height: BchSpace.s2),
-                const Text(
-                  'Vertical acceleration with gravity removed. Calibrate on one '
-                  'known speed bump at two speeds; 2.5 m/s² is the starting point.',
-                  style: BchType.caption,
-                ),
-              ]),
-
               _section('Supabase', <Widget>[
                 Row(
                   children: <Widget>[
@@ -187,7 +72,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       child: Text(
                         _settings.uploadEnabled
                             ? 'Writing to ${_settings.supabase.host}'
-                            : 'Detections are held on the phone',
+                            : 'Readings are held on the phone',
                         style: BchType.body,
                       ),
                     ),
@@ -243,8 +128,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 const SizedBox(height: BchSpace.s2),
                 const Text(
                   'Blank fields fall back to the values passed with --dart-define '
-                  'at build time. RLS is wide open for the demo, so the anon key '
-                  'is enough to write.',
+                  'at build time. The anon key can only insert rows.',
                   style: BchType.caption,
                 ),
               ]),
@@ -252,14 +136,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
               Padding(
                 padding: const EdgeInsets.all(BchSpace.s4),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Device ${_settings.scanner.deviceId.substring(0, 8)} · '
-                        'scanner ${_settings.scanner.scannerId.substring(0, 8)}',
-                        style: BchType.caption,
-                      ),
-                    ),
                     SecondaryButton(
                       label: 'Close',
                       onPressed: () => Navigator.of(context).pop(),
@@ -290,40 +168,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
           ...children,
         ],
       ),
-    );
-  }
-
-  Widget _slider({
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required String readout,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          width: 118,
-          child: Text(label, style: BchType.body),
-        ),
-        Expanded(
-          child: Slider(
-            value: value.clamp(min, max).toDouble(),
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
-        ),
-        SizedBox(
-          width: 58,
-          child: Text(
-            readout,
-            textAlign: TextAlign.right,
-            style: BchType.rowSecondary,
-          ),
-        ),
-      ],
     );
   }
 
