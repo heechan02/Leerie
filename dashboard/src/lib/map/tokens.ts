@@ -16,6 +16,16 @@ export const MAP_FALLBACK = {
   ruleSoft: "#e4e2e0",
 } as const;
 
+/** Leerie's night map: rail-navy ground, streets ramp from dim (low score) to lamp yellow (high). */
+export const NIGHT = {
+  ground: "#0b1e33", // --rail
+  ink: "#ffffff", // --rail-ink
+  water: "#16304a", // --rail-2
+  dim: "#24435f", // --rail-rule
+  mid: "#a8bdd1", // --rail-ink-2
+  lit: "#ffdd00", // --focus
+} as const;
+
 export interface MapTokens {
   /** Ground under everything. `--canvas`. */
   ground: string;

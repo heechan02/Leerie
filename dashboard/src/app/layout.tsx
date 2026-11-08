@@ -18,9 +18,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Leerie, hazard detection and repair dispatch",
+  title: "Leerie, measured night light on Edinburgh streets",
   description:
-    "Operations console for highway authorities: map detected hazards, triage the repair queue, and dispatch routes to crews.",
+    "Street-level night light measured by phones, predicted for unwalked streets, and turned into safer routes and a lighting plan.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

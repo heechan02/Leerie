@@ -1,5 +1,5 @@
-import Console from "@/components/Console";
+import { ScanMap } from "@/components/leerie/ScanMap";
 
 export default function Page() {
-  return <Console />;
+  return <ScanMap />;
 }
