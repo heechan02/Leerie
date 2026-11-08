@@ -1,10 +1,9 @@
-// The camera image, cropped to fill a panel or fitted whole for full screen.
+// The camera image, cropped to fill its panel.
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../session/session_controller.dart';
-import '../theme/tokens.dart';
 
 class PreviewSurface extends StatelessWidget {
   const PreviewSurface({
@@ -41,43 +40,6 @@ class PreviewSurface extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// The same camera stream, full screen. Tap anywhere to close.
-class CameraFullscreen extends StatelessWidget {
-  const CameraFullscreen({super.key, required this.controller});
-
-  final SessionController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(context).pop(),
-        child: Semantics(
-          button: true,
-          label: 'Full screen camera. Tap to close.',
-          child: ListenableBuilder(
-            listenable: controller,
-            builder: (context, _) {
-              final camera = controller.camera;
-              if (camera == null || !camera.value.isInitialized) {
-                return Center(
-                  child: Text(
-                    controller.cameraStatus.label,
-                    style: BchType.body.copyWith(color: BchColor.white70),
-                  ),
-                );
-              }
-              return PreviewSurface(controller: controller, camera: camera, crop: false);
-            },
-          ),
-        ),
-      ),
     );
   }
 }

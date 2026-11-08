@@ -25,6 +25,9 @@ class ConsoleScreen extends StatefulWidget {
 class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserver {
   SessionController get controller => widget.controller;
 
+  /// Tapping the camera grows it to the top of the screen and shrinks the meter to one row.
+  bool _expanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -63,12 +66,19 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    _header(context),
-                    Expanded(flex: 2, child: _meter()),
-                    const SizedBox(height: BchSpace.s3),
-                    _metrics(),
-                    const SizedBox(height: BchSpace.s3),
-                    Expanded(child: _preview(context)),
+                    if (_expanded) ...<Widget>[
+                      const SizedBox(height: BchSpace.s3),
+                      Expanded(child: _preview(context)),
+                      const SizedBox(height: BchSpace.s3),
+                      _compactMetrics(),
+                    ] else ...<Widget>[
+                      _header(context),
+                      Expanded(flex: 2, child: _meter()),
+                      const SizedBox(height: BchSpace.s3),
+                      _metrics(),
+                      const SizedBox(height: BchSpace.s3),
+                      Expanded(child: _preview(context)),
+                    ],
                     _status(),
                     _footer(),
                     const SizedBox(height: BchSpace.s3),
@@ -295,12 +305,10 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           // analyser promotes it to non-null inside the branch.
           if (camera != null && ready)
             GestureDetector(
-              onTap: () => Navigator.of(context).push<void>(MaterialPageRoute<void>(
-                builder: (_) => CameraFullscreen(controller: controller),
-              )),
+              onTap: () => setState(() => _expanded = !_expanded),
               child: Semantics(
                 button: true,
-                label: 'Camera view. Tap for full screen.',
+                label: _expanded ? 'Camera view. Tap to shrink.' : 'Camera view. Tap to enlarge.',
                 child: PreviewSurface(controller: controller, camera: camera),
               ),
             )
@@ -384,6 +392,32 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           ? 'ISO ${e.iso!.round()} · 1/${(1 / e.exposureS!).round()} s · '
               'f/${e.aperture?.toStringAsFixed(1) ?? '?'}'
           : null,
+    );
+  }
+
+  Widget _compactMetrics() {
+    final lum = controller.luminance;
+    final started = controller.startedAt;
+    return MetricRow(
+      height: 56,
+      cells: <Widget>[
+        MetricCell(
+          value: lum == null ? '—' : formatStops(luminanceStops(lum)),
+          unit: lum == null ? null : 'stops',
+          label: 'Light, not lux',
+        ),
+        MetricCell(
+          value: controller.isRecording && started != null
+              ? elapsed(DateTime.now().difference(started))
+              : '—',
+          label: 'Elapsed',
+        ),
+        MetricCell(
+          value: controller.kmScanned.toStringAsFixed(1),
+          unit: 'km',
+          label: 'Walked',
+        ),
+      ],
     );
   }
 
