@@ -15,7 +15,7 @@
 | `sensor/` | A | Flutter scanner, Android and iOS |
 | `supabase/` | done | Tables, insert-only RLS |
 | `pipeline/` | B | `run.py` (pull → export), `validate.py` |
-| `data/` | B | `segments.geojson`, `validation.json`, `forecast_frozen.csv`, `sessions.csv` |
+| `data/` | B | `segments.geojson`, `lamps.geojson` (council columns, `pipeline/lamps.py`), `validation.json`, `forecast_frozen.csv`, `sessions.csv` |
 | `dashboard/` | A (app, components), B (`src/lib/leerie/`: `route.ts`, `planner.ts`) | Next.js 16 + MapLibre, reads only `data/` files |
 
 ## Android scanner MVP (working now)
@@ -60,6 +60,7 @@ Properties (snake_case; unknown values are `null`, never 0):
 | `simd_crime_rate` | number or null | SIMD crime rate of the data zone |
 | `L`, `R`, `C` | number 0-1 | score signals, as defined in the brief |
 | `score` | number 0-100 | `100 × (0.5L + 0.3(1−R) + 0.2(1−C))` |
+| `lamp_refs` | string[] | council lamp asset IDs within 20 m (up to 5), for Inspect first; from `data/lamps.geojson` |
 
 Change this contract only with the whole team's agreement.
 

@@ -23,6 +23,10 @@ MAX_SPEED_MPS = 5  # brief says 3; relaxed because session 5113f195 walked at a 
 MATCH_M = 15
 NEIGHBOUR_M = 150
 MIN_ROWS = 3
+LAMP_M = 20  # a lamp within 20 m lights this street
+LAMP_SEARCH_M = 200  # nearest_lamp_m is null beyond this
+GRID_M = 50
+INSPECT_STOPS = 2
 UNCOMFORTABLE = {"dark", "followed", "harassment", "other"}
 
 
@@ -80,6 +84,28 @@ def pct(values: list[float], q: float) -> float:
     return s[min(len(s) - 1, int(q * len(s)))]
 
 
+def should_inspect(lamps_per_100m: float | None, median_lamps: float, stops: float | None, expected: float | None) -> bool:
+    """Lamped at least like a typical measured street, yet 2+ stops darker than its measured neighbours."""
+    if lamps_per_100m is None or stops is None or expected is None:
+        return False
+    return lamps_per_100m > 0 and lamps_per_100m >= median_lamps and stops <= expected - INSPECT_STOPS
+
+
+def lamp_stats(ps: list, grid: dict) -> tuple[float, list[tuple[float, str]]]:
+    """Nearest lamp distance and the lamps within LAMP_M of a polyline (x/y metres)."""
+    cells = range(int((min(x for x, _ in ps) - LAMP_SEARCH_M) // GRID_M), int((max(x for x, _ in ps) + LAMP_SEARCH_M) // GRID_M) + 1)
+    rows = range(int((min(y for _, y in ps) - LAMP_SEARCH_M) // GRID_M), int((max(y for _, y in ps) + LAMP_SEARCH_M) // GRID_M) + 1)
+    best, near = math.inf, []
+    for cx in cells:
+        for cy in rows:
+            for p, ref in grid.get((cx, cy), []):
+                d = min(seg_dist(p, a, b) for a, b in zip(ps, ps[1:]))
+                best = min(best, d)
+                if d <= LAMP_M:
+                    near.append((d, ref))
+    return best, sorted(near)
+
+
 def main() -> None:
     e = env()
     readings = fetch(e, "light_readings", "session_id,recorded_at,location,gps_accuracy_m,speed_mps,brightness")
@@ -126,13 +152,15 @@ def main() -> None:
 
     # Predict: mean of measured neighbours within 150 m (by way midpoint), interval widened by 1 stop.
     mid = [ps[len(ps) // 2] for ps in pts]
-    stops, lo, hi = {}, {}, {}
+    stops, lo, hi, expected = {}, {}, {}, {}
     for i, (med, p10, p90, _, _) in measured.items():
         stops[i], lo[i], hi[i] = med - ref, p10 - ref, p90 - ref
     for i in range(len(ways)):
+        near = [stops[j] for j in measured if j != i and math.dist(mid[i], mid[j]) <= NEIGHBOUR_M]
+        if near:
+            expected[i] = statistics.mean(near)  # out-of-sample for measured streets: never includes itself
         if i in measured:
             continue
-        near = [stops[j] for j in measured if math.dist(mid[i], mid[j]) <= NEIGHBOUR_M]
         if near:
             m = statistics.mean(near)
             spread = (statistics.pstdev(near) if len(near) > 1 else 0) + 1
@@ -150,6 +178,16 @@ def main() -> None:
         order = sorted(values, key=values.get)
         return {k: (n / (len(order) - 1) if len(order) > 1 else 0.5) for n, k in enumerate(order)}
 
+    # Lamps: council lighting columns (pipeline/lamps.py), bucketed on a 50 m grid.
+    grid = {}
+    for f in json.loads((DATA / "lamps.geojson").read_text())["features"]:
+        p = xy(*f["geometry"]["coordinates"])
+        grid.setdefault((int(p[0] // GRID_M), int(p[1] // GRID_M)), []).append((p, f["properties"]["asset_id"]))
+    lamps = [lamp_stats(ps, grid) for ps in pts]
+    lengths = [sum(math.dist(a, b) for a, b in zip(ps, ps[1:])) for ps in pts]
+    per_100m = [100 * len(near) / length if length > 0 else None for (_, near), length in zip(lamps, lengths)]
+    median_lamps = statistics.median([per_100m[i] for i in measured if per_100m[i]] or [0])
+
     L, L_lo = rank(stops), rank(lo)
     feats = []
     for i, w in enumerate(ways):
@@ -160,7 +198,8 @@ def main() -> None:
         R = (len(sessions) + 1) / (passes + 10)
         score = None if i not in L else round(100 * (0.5 * L[i] + 0.3 * (1 - R) + 0.2 * 0.5), 1)
         score_lo = None if i not in L_lo else round(100 * (0.5 * L_lo[i] + 0.3 * (1 - R) + 0.2 * 0.5), 1)
-        length = sum(math.dist(a, b) for a, b in zip(pts[i], pts[i][1:]))
+        length = lengths[i]
+        nearest_lamp, near_lamps = lamps[i]
         r2 = lambda v: None if v is None else round(v, 2)  # noqa: E731
         feats.append({
             "type": "Feature",
@@ -171,7 +210,10 @@ def main() -> None:
                 "measured": i in measured, "n_readings": measured[i][3] if i in measured else 0, "passes": passes,
                 "brightness": round(2 ** measured[i][0], 6) if i in measured else None,
                 "brightness_stops": r2(stops.get(i)), "brightness_lo": r2(lo.get(i)), "brightness_hi": r2(hi.get(i)),
-                "expected_stops": None, "lamps_per_100m": None, "nearest_lamp_m": None, "inspect": False,
+                "expected_stops": r2(expected.get(i)), "lamps_per_100m": r2(per_100m[i]),
+                "nearest_lamp_m": round(nearest_lamp, 1) if nearest_lamp <= LAMP_SEARCH_M else None,
+                "inspect": i in measured and should_inspect(per_100m[i], median_lamps, stops.get(i), expected.get(i)),
+                "lamp_refs": [r for _, r in near_lamps[:5]],
                 "usage": None, "forecast": False,
                 "reports_possible": len(sessions) - confirmed, "reports_confirmed": confirmed,
                 "simd_crime_rate": None, "L": r2(L.get(i)), "R": round(R, 3), "C": None,
