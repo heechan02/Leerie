@@ -144,6 +144,35 @@ class Breadcrumb {
   }
 }
 
+/// One row of `incidents`: a comfortable/uncomfortable tap. No photo, no name.
+class Incident {
+  const Incident({
+    required this.createdAt,
+    required this.lat,
+    required this.lng,
+    required this.category,
+    this.gpsAccuracyM,
+    this.sessionId,
+  });
+
+  final DateTime createdAt;
+  final double lat;
+  final double lng;
+  final double? gpsAccuracyM;
+
+  /// 'comfortable', or why it felt uncomfortable: 'dark', 'followed', 'harassment', 'other'.
+  final String category;
+  final String? sessionId;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'session_id': sessionId,
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'location': ewktPoint(lng, lat),
+        'gps_accuracy_m': gpsAccuracyM,
+        'category': category,
+      };
+}
+
 /// Where a detection has got to on its way to Postgres. Spelled out in the row's
 /// evidence line — the left marker's weight repeats it, never carries it alone.
 enum UploadState {

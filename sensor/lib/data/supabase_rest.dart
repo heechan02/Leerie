@@ -126,6 +126,20 @@ class SupabaseRest {
     }
   }
 
+  Future<void> postIncident(Incident incident) async {
+    final response = await _client
+        .post(
+          Uri.parse('$_base/rest/v1/incidents'),
+          headers: _headers,
+          body: jsonEncode(incident.toJson()),
+        )
+        .timeout(_timeout);
+
+    if (response.statusCode >= 300) {
+      throw SupabaseException('Post report', response.statusCode, response.body);
+    }
+  }
+
   /// The whole write path. The trigger does the rest: clustering, corroboration
   /// and `hazard_id` on the way in.
   Future<void> postDetection(

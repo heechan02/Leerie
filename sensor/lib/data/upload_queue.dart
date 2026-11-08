@@ -89,6 +89,21 @@ class PositionsJob extends UploadJob {
       rest.postPositions(batch, sessionId: sessionId);
 }
 
+class IncidentJob extends UploadJob {
+  IncidentJob(this.incident);
+
+  final Incident incident;
+
+  @override
+  int get maxAttempts => 8;
+
+  @override
+  String get describe => 'Report (${incident.category})';
+
+  @override
+  Future<void> run(SupabaseRest rest) => rest.postIncident(incident);
+}
+
 class TripEndJob extends UploadJob {
   TripEndJob({required this.tripId, required this.distanceM});
 

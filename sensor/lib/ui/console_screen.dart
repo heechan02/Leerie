@@ -65,6 +65,8 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
                 const Hairline(),
                 _metrics(),
                 const Hairline(),
+                _reports(context),
+                const Hairline(),
                 _footer(context),
               ],
             );
@@ -72,6 +74,70 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
         ),
       ),
     );
+  }
+
+  // ─── Reports ──────────────────────────────────────────────────────────────
+
+  Widget _reports(BuildContext context) {
+    const size = Size.fromHeight(64);
+    return Padding(
+      padding: const EdgeInsets.all(BchSpace.s3),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: size, foregroundColor: BchColor.text),
+              icon: const Icon(Icons.sentiment_satisfied_alt),
+              label: const Text('Comfortable'),
+              onPressed: () => _send(context, 'comfortable'),
+            ),
+          ),
+          const SizedBox(width: BchSpace.s3),
+          Expanded(
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: size, backgroundColor: BchColor.accent),
+              icon: const Icon(Icons.sentiment_dissatisfied),
+              label: const Text('Uncomfortable'),
+              onPressed: () => _pickReason(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickReason(BuildContext context) async {
+    const reasons = <String, String>{
+      'dark': 'Too dark',
+      'followed': 'Followed',
+      'harassment': 'Harassment',
+      'other': 'Other',
+    };
+    final category = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const ListTile(title: Text('Why does it feel uncomfortable here?')),
+            for (final entry in reasons.entries)
+              ListTile(
+                minTileHeight: 56,
+                title: Text(entry.value),
+                onTap: () => Navigator.of(sheet).pop(entry.key),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (category != null && context.mounted) _send(context, category);
+  }
+
+  void _send(BuildContext context, String category) {
+    final message = controller.report(category);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ─── Header ───────────────────────────────────────────────────────────────

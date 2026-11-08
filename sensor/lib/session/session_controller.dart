@@ -438,6 +438,27 @@ class SessionController extends ChangeNotifier {
     queue.add(PositionsJob(batch: batch, sessionId: trip));
   }
 
+  // ─── Reports ──────────────────────────────────────────────────────────────
+
+  int reportsSent = 0;
+
+  /// One comfortable/uncomfortable tap at the current position. Returns what to tell the walker.
+  String report(String category) {
+    final position = lastPosition;
+    if (position == null) return 'No GPS fix yet, so the report was not sent.';
+    if (!uploadsOn) return 'Supabase is not set, so the report was not sent.';
+    queue.add(IncidentJob(Incident(
+      createdAt: DateTime.now(),
+      lat: position.latitude,
+      lng: position.longitude,
+      gpsAccuracyM: position.accuracy,
+      category: category,
+      sessionId: tripId,
+    )));
+    _set(() => reportsSent++);
+    return 'Sent: $category, ±${position.accuracy.round()} m.';
+  }
+
   // ─── Detections ───────────────────────────────────────────────────────────
 
   void _onAccelHit(AccelHit hit) {
