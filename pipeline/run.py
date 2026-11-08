@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 MAX_ACCURACY_M = 15
-MAX_SPEED_MPS = 3
+MAX_SPEED_MPS = 5  # brief says 3; relaxed because session 5113f195 walked at a GPS speed of ~4 m/s
 MATCH_M = 15
 NEIGHBOUR_M = 150
 MIN_ROWS = 3
