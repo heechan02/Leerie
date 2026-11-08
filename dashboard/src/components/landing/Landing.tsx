@@ -4,34 +4,33 @@ import { Hero } from "./Hero";
 import { LiveNumbers } from "./LiveNumbers";
 import "./landing.css";
 
-const ONS = "https://www.ons.gov.uk/peoplepopulationandcommunity/crimeandjustice/bulletins/perceptionsofpersonalsafetyandexperiencesofharassmentgreatbritain/2to27june2021";
+const ONS = "https://www.ons.gov.uk/peoplepopulationandcommunity/crimeandjustice/bulletins/perceptionsofpersonalsafetyandexperiencesofharassmentgreatbritain/16februaryto13march2022";
 const STATS = [
-  { value: "1 in 2", text: "women feel unsafe walking alone after dark on a quiet street near their home. For men it is 1 in 7.",
-    source: "ONS, Great Britain, 2021", href: ONS },
-  { value: "4 in 5", text: "women feel unsafe walking alone after dark in a park or other open space. For men it is 2 in 5.",
-    source: "ONS, Great Britain, 2021", href: ONS },
-  { value: "35%", text: "of women in Scotland do not feel safe walking alone in their own area after dark, against 10% of men.",
-    source: "Scottish Crime and Justice Survey 2019/20",
-    href: "https://www.gov.scot/publications/scottish-crime-justice-survey-2019-20-main-findings/pages/35/" },
-  { value: "71%", text: "of women in the UK have experienced sexual harassment in a public space.",
-    source: "UN Women UK / YouGov, 2021",
-    href: "https://www.unwomenuk.org/site/wp-content/uploads/2021/03/APPG-UN-Women-Sexual-Harassment-Report_Updated.pdf" },
+  { value: "50%", text: "of women felt unsafe walking alone after dark on a quiet street near home, compared with 17% of men.",
+    source: "ONS, Great Britain, 2022", href: ONS },
+  { value: "82%", text: "of women felt unsafe walking alone after dark in a park or open space, compared with 42% of men.",
+    source: "ONS, Great Britain, 2022", href: ONS },
+  { value: "71%", text: "of women in Scotland felt safe walking alone in their neighbourhood after dark, compared with 90% of men.",
+    source: "Scottish Household Survey, 2025",
+    href: "https://www.gov.scot/publications/neighbourhoods-and-communities-2025-findings-from-the-scottish-household-survey/pages/neighbourhood-safety/" },
+  { value: "38%", text: "of women aged 16 to 34 reported catcalling in the previous 12 months.",
+    source: "ONS, Great Britain, 2022", href: ONS },
 ];
 
 const STEPS = [
   { n: "01", title: "Walk", text: "Open the app, point the camera ahead and walk. Leerie undoes auto-exposure with the camera's own shutter speed, ISO and aperture, the method the phyphox lab app uses, and uploads one reading a second with its GPS point. Comfortable and Uncomfortable buttons record how a street feels." },
-  { n: "02", title: "Map", text: "Readings are matched to OpenStreetMap streets and compared in stops: +1 is twice the light of the median street. Streets nobody walked are predicted from measured neighbours, drawn faded, and given a range rather than a single number." },
-  { n: "03", title: "Decide", text: "A council officer draws a box and types a budget and a cost per lamp. Leerie picks the streets that gain most per pound, writes a works order for contractors, lists where one more walk would change the plan, and flags streets that have lamps but still measure dark." },
+  { n: "02", title: "Map", text: "Readings are matched to OpenStreetMap streets and compared with nearby measurements. A street at +1 stop has twice the light of its local median. Where nearby readings support an estimate, unmeasured streets appear faded." },
+  { n: "03", title: "Decide", text: "Draw an area and set a budget. Leerie maps proposed lamp sites, estimates their effect, and exports the coordinates. It also highlights lighting hotspots and streets worth surveying next." },
 ];
 
 /** The council's lamp map beside our light map, same view each time. Images: /map with one layer on. */
 const COMPARE = [
   { key: "area", title: "George Square to King's Buildings",
-    lamps: "Lamp posts are spread evenly. On this map every street looks lit.",
-    light: "Measured light varies a lot from street to street. Amber is bright, violet is dark, faded is predicted." },
+    lamps: "The council inventory shows where lamp posts are installed.",
+    light: "Measured light varies from street to street. Amber is brighter, violet is darker, and faded lines show estimates." },
   { key: "street", title: "Around Findhorn Place",
-    lamps: "Lamps line both sides, as many as on a typical street we walked.",
-    light: "Findhorn Place still measures 2.3 stops darker than the streets around it, about a fifth of the light." },
+    lamps: "Council records show lamp posts on both sides of the street.",
+    light: "In this survey view, Findhorn Place appears darker than the streets around it." },
 ];
 
 const PRIVACY = [
@@ -50,7 +49,7 @@ export function Landing() {
           <a href="#why">Why</a>
           <a href="#how">How it works</a>
           <a href="#compare">Lamps vs light</a>
-          <a href="#night">Last night</a>
+          <a href="#night">Night survey</a>
           <Link className="lr-button" href="/map">Open the map</Link>
         </div>
       </nav>
@@ -74,13 +73,13 @@ export function Landing() {
           </div>
           <div className="ld-callout">
             <p className="display">
-              Light is one thing a council can change. In a randomised trial in New York City public housing,
-              extra street lighting cut night-time outdoor crime by at least 36%.
+              A randomised trial in New York City public housing estimated that extra lighting reduced
+              serious crimes outdoors at night by at least 36%.
             </p>
             <p className="secondary">
-              But nobody measures how much light reaches the pavement. Councils know where their lamps are,
-              not whether a dead lantern, a tree or a long gap between posts has left a stretch in the dark.{" "}
-              <a className="ld-source" href="https://econpapers.repec.org/RePEc:nbr:nberwo:25798" target="_blank" rel="noreferrer">Chalfin et al., NBER</a>
+              A lamp inventory shows where the posts are. Measurements can reveal where a failed lamp,
+              a tree or a long gap between posts leaves the pavement dark.{" "}
+              <a className="ld-source" href="https://www.nber.org/papers/w25798" target="_blank" rel="noreferrer">Chalfin et al., NBER</a>
             </p>
           </div>
         </section>
@@ -122,13 +121,7 @@ export function Landing() {
         </section>
 
         <section id="night" className="ld-section">
-          <p className="micro ld-eyebrow">Last night · 7 to 8 November 2026</p>
-          <h2 className="display ld-h2">One night between George Square and King&apos;s Buildings.</h2>
-          <p className="ld-shifts secondary">
-            We took it in shifts: all night, until 6:30, each of us took a turn out on the streets with the phones.
-          </p>
           <LiveNumbers />
-          <Link className="lr-button" href="/map">Explore the map</Link>
         </section>
 
         <section className="ld-section ld-poem">
@@ -137,7 +130,7 @@ export function Landing() {
           </blockquote>
           <p className="secondary">
             Robert Louis Stevenson, <i>The Lamplighter</i>, 1885. Leerie was the man who lit Edinburgh&apos;s gas lamps each evening.
-            Nobody walks the streets checking the light any more. So we did.
+            We took that idea back to the streets with a phone light meter.
           </p>
         </section>
 

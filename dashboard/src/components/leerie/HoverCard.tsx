@@ -8,9 +8,9 @@ const GAP = 16;
 
 const stops = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}`);
 
-type Props = { street: SegmentProps; x: number; y: number; width: number; height: number };
+type Props = { street: SegmentProps; x: number; y: number; width: number; height: number; lightRadius?: number };
 
-export function HoverCard({ street, x, y, width, height }: Props) {
+export function HoverCard({ street, x, y, width, height, lightRadius }: Props) {
   const s = score(street, LIGHT_ONLY_WEIGHTS);
   // Flip to the left of the cursor near the right edge; clamp vertically.
   const left = x + GAP + CARD_W > width ? Math.max(8, x - GAP - CARD_W) : x + GAP;
@@ -26,7 +26,7 @@ export function HoverCard({ street, x, y, width, height }: Props) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div className="data lr-score">{s == null ? "—" : s.toFixed(0)}</div>
-          <div className="micro secondary">light / 100</div>
+          <div className="micro secondary">{lightRadius ? "local light" : "light"} / 100</div>
         </div>
       </div>
 
@@ -36,12 +36,13 @@ export function HoverCard({ street, x, y, width, height }: Props) {
         ) : (
           <span className="lr-pill">{street.L == null ? "NOT WALKED · NO ESTIMATE YET" : "PREDICTED FROM NEIGHBOURS"}</span>
         )}
+        {street.measured && lightRadius && s == null && <span className="lr-pill">NO NEARBY COMPARISON</span>}
         {street.inspect && <span className="lr-pill lr-pill-warn">LAMPED BUT DARKER THAN EXPECTED</span>}
       </div>
 
       <div className="lr-bars">
         <div className="lr-bar-row">
-          <span>Relative light percentile</span>
+          <span>{lightRadius ? "Local light percentile" : "Relative light percentile"}</span>
           <span className="data secondary">{s == null ? "unknown" : `${s.toFixed(0)} / 100`}</span>
           <div className="lr-bar lr-bar-light"><span style={{ width: `${s ?? 0}%` }} /></div>
         </div>
@@ -54,7 +55,9 @@ export function HoverCard({ street, x, y, width, height }: Props) {
         Light <span className="data">{stops(street.brightness_stops)}</span> stops
         <span className="secondary"> (80%: <span className="data">{stops(street.brightness_lo)} to {stops(street.brightness_hi)}</span>)</span>
       </p>
-      <p className="lr-line secondary" style={{ fontSize: "var(--t-micro)" }}>vs median street · +1 = 2× light</p>
+      <p className="lr-line secondary" style={{ fontSize: "var(--t-micro)" }}>
+        {lightRadius ? `vs local median within ${lightRadius} m` : "vs median street"} · +1 = 2× light
+      </p>
       {street.nearest_lamp_m != null && (
         <p className="lr-line">
           Council lamps <span className="data">{(street.lamps_per_100m ?? 0).toFixed(1)}</span> per 100 m

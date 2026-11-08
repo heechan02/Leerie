@@ -29,7 +29,8 @@ export const NIGHT = {
   hotHigh: "#c2185b", // --hot-high
   /** Score ramp, 0 → 100: blue to amber, each stop lighter than the last so it reads without hue. No red: that is reports. */
   ramp: [[0, "#3346b0"], [45, "#7462d0"], [70, "#d99a4e"], [100, "#ffc53d"]] as const,
-  picked: "#ffffff", // Light first: white-hot, off the score ramp
+  picked: "#ffffff", // Proposed lamp sites
+  lightingHotspot: "#62e5c8",
   scan: "#b9a8ff", // Scan next: lavender, off the score ramp
 } as const;
 

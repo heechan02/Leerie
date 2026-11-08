@@ -88,7 +88,8 @@ After changing the windows, run `python3 -m pipeline.run`,
 `node dashboard/scripts/copy-maplibre-worker.mjs`. The live pipeline loop also
 uses this selection on every refresh. Replay snapshots remain local and private.
 
-Map colours and lighting plans use 100% relative light (0–100 percentile).
+Map colours and lighting plans use the local light percentile (0–100), based on
+nearby measured street segments within 75 m.
 Reports remain visible as separate markers and in street hover details; they do
 not change light scores. The map no longer has score-weight sliders.
 

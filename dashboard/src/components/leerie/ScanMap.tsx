@@ -1,7 +1,7 @@
 "use client";
 // The scan map: every street segment from data/segments.geojson, coloured by score,
 // measured streets solid and predicted ones faded. Hover a street for its breakdown.
-// Plan mode: drag a box, enter budget and costs, and the planner picks the streets to light.
+// Plan mode: drag a box to see proposed lamp posts within the budget.
 import Link from "next/link";
 import type { RecordingSelection } from "@/lib/leerie/replay";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +10,7 @@ import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { buildMapStyle } from "@/lib/map/style";
 import { NIGHT } from "@/lib/map/tokens";
-import { plan as runPlan, type Box } from "@/lib/leerie/planner";
+import { lightingHotspots, PLAN_DEFAULTS, plan as runPlan, type Box } from "@/lib/leerie/planner";
 import { HoverCard } from "./HoverCard";
 import { Legend } from "./Legend";
 import { PlanPanel, type PlanInputs } from "./PlanPanel";
@@ -19,10 +19,14 @@ import type { SegmentProps as Props } from "./types";
 
 if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
-type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props> & { recording_selection?: RecordingSelection };
+type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props> & {
+  recording_selection?: RecordingSelection;
+  light_reference_radius_m?: number;
+};
 
 const CENTER: [number, number] = [-3.181, 55.934]; // between George Square and King's Buildings
 const REFRESH_MS = 60_000; // the pipeline loop rewrites segments.geojson every minute while scanning
+type CouncilLamps = GeoJSON.FeatureCollection<GeoJSON.Point>;
 
 /** Real file first, the fake one until Dev B's pipeline writes it. */
 async function loadSegments(): Promise<{ data: Segments; source: string }> {
@@ -35,7 +39,6 @@ async function loadSegments(): Promise<{ data: Segments; source: string }> {
 
 type Hover = { street: Props; x: number; y: number; width: number; height: number };
 type Mode = "map" | "plan";
-// Streets to light are white-hot with an amber halo, so they stand out from the amber end of the score ramp.
 const { picked: PICKED, scan: SCAN } = NIGHT;
 
 /** One point per street that two or more walks reported, at its middle vertex: per-street, never raw taps. */
@@ -62,9 +65,15 @@ export function ScanMap() {
   const mapRef = useRef<MapRef>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mode, setMode] = useState<Mode>("map");
+  const [showLightingHotspots, setShowLightingHotspots] = useState(false);
   const [box, setBox] = useState<Box | null>(null);
+  const [drawing, setDrawing] = useState(false);
   const drawFrom = useRef<[number, number] | null>(null);
-  const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
+  const [inputs, setInputs] = useState<PlanInputs>({
+    budget: String(PLAN_DEFAULTS.budget), costPerLight: String(PLAN_DEFAULTS.costPerLight), spacingM: String(PLAN_DEFAULTS.spacingM),
+  });
+  const [councilLamps, setCouncilLamps] = useState<CouncilLamps | null>(null);
+  const [lampError, setLampError] = useState(false);
   // One layer at a time: lamp dots over coloured streets is too busy to read.
   const [layer, setLayer] = useState<"light" | "lamps">("light");
 
@@ -80,23 +89,52 @@ export function ScanMap() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/data/lamps.geojson", { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Council lamp data unavailable");
+        return res.json() as Promise<CouncilLamps>;
+      })
+      .then(setCouncilLamps)
+      .catch(() => { if (!controller.signal.aborted) setLampError(true); });
+    return () => controller.abort();
+  }, []);
+
+  const existingLamps = useMemo(() => councilLamps?.features.map((f) => f.geometry.coordinates), [councilLamps]);
   const plan = useMemo(() => {
     const [budget, costPerLight, spacingM] = [inputs.budget, inputs.costPerLight, inputs.spacingM].map(Number);
-    if (mode !== "plan" || !loaded || !box || !(budget > 0 && costPerLight > 0 && spacingM > 0)) return null;
-    return runPlan(loaded.data.features, box, { budget, costPerLight, spacingM, weights });
-  }, [mode, loaded, box, inputs, weights]);
+    if (mode !== "plan" || !loaded || !box || drawing || (!existingLamps && !lampError) ||
+      ![budget, costPerLight, spacingM].every(Number.isFinite) || budget <= 0 || costPerLight <= 0 || spacingM < 1) return null;
+    return runPlan(loaded.data.features, box, { budget, costPerLight, spacingM, weights, existingLamps });
+  }, [mode, loaded, box, drawing, inputs, weights, lampError, existingLamps]);
+  const lightingOverview = useMemo(() => {
+    if (mode !== "plan" || !showLightingHotspots || !loaded || (!existingLamps && !lampError)) return null;
+    const streets = lightingHotspots(loaded.data.features, existingLamps);
+    const segmentIds = new Set(streets.flatMap((street) => street.segmentIds));
+    const data: Segments = {
+      type: "FeatureCollection",
+      features: loaded.data.features.filter((f) => segmentIds.has(f.properties.segment_id)),
+    };
+    return { streets, data };
+  }, [mode, showLightingHotspots, loaded, existingLamps, lampError]);
+  const plannedLamps = useMemo<GeoJSON.FeatureCollection<GeoJSON.Point> | null>(() => plan && ({
+    type: "FeatureCollection",
+    features: plan.lamps.map(({ coordinates }) => ({
+      type: "Feature", geometry: { type: "Point", coordinates }, properties: {},
+    })),
+  }), [plan]);
 
   // Recompute every score with the current weights; MapLibre colours by `_score`.
   const data = useMemo<Segments | null>(() => {
     if (!loaded) return null;
-    const picked = new Set(plan?.picks.map((p) => p.segment_id));
     const scan = new Set(plan?.scanNext.map((p) => p.segment_id));
     return {
       ...loaded.data,
       features: loaded.data.features.map((f) => ({
         ...f,
         properties: { ...f.properties, _score: score(f.properties, weights),
-          _picked: picked.has(f.properties.segment_id), _scan: scan.has(f.properties.segment_id) },
+          _scan: scan.has(f.properties.segment_id) },
       })),
     };
   }, [loaded, weights, plan]);
@@ -134,22 +172,35 @@ export function ScanMap() {
   const onDown = (e: MapLayerMouseEvent) => {
     if (mode !== "plan") return;
     drawFrom.current = [e.lngLat.lng, e.lngLat.lat];
+    setHover(null);
+    setDrawing(true);
     setBox(null);
   };
-  const onDrag = (e: MapLayerMouseEvent) => {
+  const updateBox = (e: MapLayerMouseEvent) => {
     const from = drawFrom.current;
     if (!from) return;
-    if (e.originalEvent.buttons === 0) { drawFrom.current = null; return; } // released outside the map
     const [x, y] = [e.lngLat.lng, e.lngLat.lat];
-    setBox([Math.min(from[0], x), Math.min(from[1], y), Math.max(from[0], x), Math.max(from[1], y)]);
+    if (from[0] !== x && from[1] !== y) {
+      setBox([Math.min(from[0], x), Math.min(from[1], y), Math.max(from[0], x), Math.max(from[1], y)]);
+    }
+  };
+  const endDraw = () => {
+    drawFrom.current = null;
+    setDrawing(false);
   };
   const onHover = (e: MapLayerMouseEvent) => {
-    if (drawFrom.current) return onDrag(e);
+    if (drawFrom.current) {
+      if (e.originalEvent.buttons === 0) endDraw(); // released outside the map
+      else updateBox(e);
+      return;
+    }
+    if (mode === "plan") return;
     const f = e.features?.[0];
     const box = e.target.getContainer();
     setHover(f ? { street: f.properties as Props, x: e.point.x, y: e.point.y, width: box.clientWidth, height: box.clientHeight } : null);
   };
   const isFake = loaded?.source.includes("fake") ?? false;
+  const lightRadius = loaded?.data.light_reference_radius_m;
 
   return (
     <main className="lr-app">
@@ -165,7 +216,7 @@ export function ScanMap() {
           dragPan={mode === "map"}
           interactiveLayerIds={layer === "light" ? ["segments-hit"] : []}
           onMouseDown={onDown}
-          onMouseUp={() => { drawFrom.current = null; }}
+          onMouseUp={(e) => { updateBox(e); endDraw(); }}
           onMouseMove={onHover}
           onClick={onHover}
           onMouseLeave={() => setHover(null)}
@@ -190,14 +241,9 @@ export function ScanMap() {
               <Layer id="segments-hit" type="line" paint={{ "line-width": 12, "line-opacity": 0.01 }} />
               <Layer id="segments-scan" type="line" filter={["==", ["get", "_scan"], true]}
                 paint={{ "line-color": SCAN, "line-width": 4, "line-dasharray": [1, 1.5] }} />
-              <Layer id="segments-picked-glow" type="line" filter={["==", ["get", "_picked"], true]}
-                layout={{ "line-cap": "round" }} paint={{ "line-color": NIGHT.lamp, "line-width": 16, "line-blur": 10, "line-opacity": 0.7 }} />
-              <Layer id="segments-picked" type="line" filter={["==", ["get", "_picked"], true]}
-                layout={{ "line-cap": "round" }} paint={{ "line-color": PICKED, "line-width": 4 }} />
             </Source>
           )}
-          {/* Council lamp columns: MapLibre fetches the file itself, only drawn when zoomed in. */}
-          <Source id="lamps" type="geojson" data="/data/lamps.geojson">
+          {councilLamps && <Source id="lamps" type="geojson" data={councilLamps}>
             <Layer id="lamps-glow" type="circle" minzoom={13} layout={{ visibility: layer === "lamps" ? "visible" : "none" }} paint={{
               "circle-color": NIGHT.lamp, "circle-blur": 1, "circle-opacity": 0.35,
               "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 18, 14],
@@ -205,7 +251,7 @@ export function ScanMap() {
             <Layer id="lamps-dot" type="circle" minzoom={13} layout={{ visibility: layer === "lamps" ? "visible" : "none" }} paint={{
               "circle-color": NIGHT.lit, "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 1, 18, 3],
             }} />
-          </Source>
+          </Source>}
           {hotspots && (
             <Source id="hotspots" type="geojson" data={hotspots} cluster clusterRadius={40}
               clusterProperties={{ count: ["+", ["get", "count"]] }}>
@@ -226,11 +272,30 @@ export function ScanMap() {
               <Layer id="plan-box-line" type="line" paint={{ "line-color": NIGHT.lit, "line-width": 1.5, "line-dasharray": [2, 2] }} />
             </Source>
           )}
+          {lightingOverview && (
+            <Source id="lighting-hotspots" type="geojson" data={lightingOverview.data}>
+              <Layer id="lighting-hotspot-streets" type="line"
+                layout={{ "line-cap": "round", "line-join": "round" }}
+                paint={{
+                  "line-color": NIGHT.lightingHotspot,
+                  "line-width": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 6],
+                }} />
+            </Source>
+          )}
+          {plannedLamps && (
+            <Source id="planned-lamps" type="geojson" data={plannedLamps}>
+              <Layer id="planned-lamp-dots" type="circle" paint={{
+                "circle-color": PICKED,
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 6],
+                "circle-stroke-color": NIGHT.ground, "circle-stroke-width": 1.5,
+              }} />
+            </Source>
+          )}
           <NavigationControl position="top-left" showZoom={false} visualizePitch={false} />
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
-        <Legend mode={mode} layer={layer} />
-        {hover && <HoverCard {...hover} />}
+        <Legend mode={mode} layer={layer} lightRadius={lightRadius} showLightingHotspots={Boolean(lightingOverview?.streets.length)} />
+        {hover && <HoverCard {...hover} lightRadius={lightRadius} />}
         {!loaded && (
           <div className="lr-card lr-glass lr-status" role={error ? "alert" : "status"}>
             {error ? (
@@ -259,7 +324,7 @@ export function ScanMap() {
         <div className="lr-tabs" role="tablist" aria-label="View">
           {(["map", "plan"] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className="lr-tab"
-              onClick={() => { setMode(m); setHover(null); }}>
+              onClick={() => { setMode(m); setHover(null); endDraw(); }}>
               {m === "map" ? "Streets" : "Plan lighting"}
             </button>
           ))}
@@ -268,7 +333,7 @@ export function ScanMap() {
         <p className="lr-panel-intro">
           {mode === "map"
             ? "Each street is coloured only by how much light reaches the pavement at night. Hover for the light reading and reports."
-            : "Draw a box over the area you are responsible for, then enter your budget."}
+            : "Draw a box to see proposed lamp posts. Adjust the budget, cost or spacing to update the plan."}
         </p>
 
         <section className="lr-stats" aria-label="Coverage" aria-busy={!loaded}>
@@ -278,7 +343,9 @@ export function ScanMap() {
         </section>
 
         {mode === "plan" && (
-          <PlanPanel plan={plan} hasBox={box != null} inputs={inputs} onInputs={setInputs} onClearBox={() => setBox(null)} />
+          <PlanPanel plan={plan} hasBox={box != null} inputs={inputs} onInputs={setInputs} onClearBox={() => setBox(null)}
+            lampError={lampError} showLightingHotspots={showLightingHotspots} onShowLightingHotspots={setShowLightingHotspots}
+            hotspots={lightingOverview?.streets ?? null} />
         )}
 
         <section aria-labelledby="layers-h">
@@ -298,7 +365,10 @@ export function ScanMap() {
           </p>
         </section>
 
-        <p className="lr-panel-intro">Street colours use 100% relative light. Reports remain visible as separate markers.</p>
+        <p className="lr-panel-intro">
+          {lightRadius ? `Street colours compare light with measured streets within ${lightRadius} m.` : "Street colours use relative light."}
+          {" "}Reports remain visible as separate markers.
+        </p>
 
         <footer style={{ display: "grid", gap: "var(--s2)" }}>
           {isFake && <p className="lr-warn" role="status">Placeholder data in use: these are not real readings.</p>}

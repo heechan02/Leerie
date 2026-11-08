@@ -49,11 +49,11 @@ The site reads these live from `data/`; this table is a snapshot.
    A dark street still reads dark even though the camera brightened the picture. iOS frames use video-range luma (16–235).
 2. **Bad readings are dropped:** GPS worse than 15 m, moving faster than 5 m/s, after 06:30, or no exposure data.
 3. **Each reading snaps to the nearest street** within 15 m. A street counts as measured with 3+ readings; its value is the median per walk, then the median across walks, so one passing headlight doesn't swing it.
-4. **Compared in stops** with the median measured street: 0 is typical, −1 is half the light, +1 is double. Relative, not lux.
-5. **Unmeasured streets** take the mean of measured streets within 150 m, with the range widened by their spread plus one stop.
-6. **Score** (0–100) = 100 × (0.5·L + 0.3·(1 − R) + 0.2·(1 − C)), where L is the street's light rank, R its uncomfortable reports per walk (smoothed), C area crime (not yet loaded, so neutral). The weights are our choice, so the map shows them as sliders.
+4. **Compared in stops** with the local median, using up to seven measured neighbours within 75 m. A measured street also contributes its own value. Zero is typical locally, −1 is half the light, and +1 is double. Relative, not lux.
+5. **Unmeasured streets** use the median of the closest two or three measurements from different segments, with the range widened by their spread plus one stop. A segment without enough local measurements has no score.
+6. **Score** (0–100) is the percentile of the segment's light against its local measured reference. Reports are displayed separately.
 7. **Decisions:**
-   - *Light first:* greedy by score gain × length per pound until the budget runs out, at the council's own cost per light and spacing. "Lit" means reaching the brightest quarter.
+   - *Light first:* places proposed posts along streets inside the selected area. Defaults are £200,000, £1,000 per post and roughly 30 m spacing. The plan skips sites within half the spacing of a known or proposed post and estimates gains for the stretches served, using the local upper quartile as the target.
    - *Scan next:* predicted streets whose chance of being dark (more than 1 stop below typical) is closest to 50/50, weighted by what lighting them would gain.
    - *Inspect first:* streets with at least as many council lamps per 100 m as a typical measured street, but 2+ stops darker than their measured neighbours.
 8. **Reports** only count as confirmed once two different walks report the same street, so one person can't brand it.

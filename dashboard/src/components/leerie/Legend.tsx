@@ -1,12 +1,14 @@
 // Compact map key, bottom-left over the map.
 import { NIGHT } from "@/lib/map/tokens";
 
-export function Legend({ mode, layer }: { mode: "map" | "plan"; layer: "light" | "lamps" }) {
+export function Legend({ mode, layer, lightRadius, showLightingHotspots }: {
+  mode: "map" | "plan"; layer: "light" | "lamps"; lightRadius?: number; showLightingHotspots: boolean;
+}) {
   return (
     <div className="lr-card lr-glass lr-legend" aria-label="Map legend">
       {layer === "light" ? (
         <>
-          <div className="micro secondary">Light score</div>
+          <div className="micro secondary">{lightRadius ? `Local light · within ${lightRadius} m` : "Light score"}</div>
           <div className="lr-ramp" style={{ background: `linear-gradient(90deg, ${NIGHT.ramp.map(([at, c]) => `${c} ${at}%`).join(", ")})` }} />
           <div className="lr-ticks data"><span>0 darker</span><span>50</span><span>100 lighter</span></div>
           <div className="lr-key"><i style={{ background: NIGHT.ramp[3][1] }} /> Measured</div>
@@ -20,7 +22,8 @@ export function Legend({ mode, layer }: { mode: "map" | "plan"; layer: "light" |
       </div>
       {mode === "plan" && (
         <>
-          <div className="lr-key"><i style={{ background: NIGHT.picked, boxShadow: `0 0 8px ${NIGHT.lamp}` }} /> Light first</div>
+          <div className="lr-key"><b className="lr-lampdot lr-lampdot-proposed" aria-hidden /> Proposed lamp post</div>
+          {showLightingHotspots && <div className="lr-key"><i style={{ background: NIGHT.lightingHotspot }} /> Lighting hotspot</div>}
           <div className="lr-key"><i style={{ background: `repeating-linear-gradient(90deg, ${NIGHT.scan} 0 4px, transparent 4px 9px)` }} /> Scan next</div>
         </>
       )}

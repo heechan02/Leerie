@@ -1,6 +1,5 @@
-// Plan mode: the council draws a box, enters its own budget, cost per light and spacing,
-// and gets the streets to light, a works order to send contractors, Scan next and Inspect first.
-import type { Plan } from "@/lib/leerie/planner";
+// Plan mode: review proposed lamp sites, their cost and where to inspect or measure next.
+import { HOTSPOT_MIN_POSTS, PLAN_DEFAULTS, type LightingHotspot, type Plan } from "@/lib/leerie/planner";
 
 export type PlanInputs = { budget: string; costPerLight: string; spacingM: string };
 
@@ -13,8 +12,12 @@ function downloadWorksOrder(plan: Plan, inputs: PlanInputs) {
     ["Street", "Segment", "Lights", "Cost (GBP)", "Score gain"],
     ...plan.picks.map((p) => [p.name ?? "Unnamed", p.segment_id, p.lights, p.cost, p.gain.toFixed(1)]),
     [],
-    ["Total", "", plan.picks.reduce((s, p) => s + p.lights, 0), plan.spend, ""],
+    ["Total", "", plan.lamps.length, plan.spend, ""],
     ["Cost per light (GBP)", inputs.costPerLight], ["Spacing (m)", inputs.spacingM], ["Budget (GBP)", inputs.budget],
+    [],
+    ["Proposed lamp", "Street", "Segment", "Latitude", "Longitude"],
+    ...plan.lamps.map(({ name, segment_id, coordinates: [lng, lat] }, i) =>
+      [i + 1, name ?? "Unnamed", segment_id, lat.toFixed(7), lng.toFixed(7)]),
   ];
   const csv = rows.map((r) => r.map(csvCell).join(",")).join("\n");
   const a = document.createElement("a");
@@ -24,14 +27,15 @@ function downloadWorksOrder(plan: Plan, inputs: PlanInputs) {
   URL.revokeObjectURL(a.href);
 }
 
-export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
-  plan: Plan | null; hasBox: boolean; inputs: PlanInputs;
+export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox, lampError, showLightingHotspots, onShowLightingHotspots, hotspots }: {
+  plan: Plan | null; hasBox: boolean; inputs: PlanInputs; lampError: boolean;
   onInputs: (i: PlanInputs) => void; onClearBox: () => void;
+  showLightingHotspots: boolean; onShowLightingHotspots: (show: boolean) => void; hotspots: LightingHotspot[] | null;
 }) {
-  const field = (key: keyof PlanInputs, label: string, example: string) => (
+  const field = (key: keyof PlanInputs, label: string) => (
     <label className="lr-field">
       {label}
-      <input className="data" type="number" min={0} inputMode="decimal" placeholder={example} value={inputs[key]}
+      <input className="data" type="number" min={key === "spacingM" ? 1 : 0.01} step="any" inputMode="decimal" value={inputs[key]}
         onChange={(e) => onInputs({ ...inputs, [key]: e.target.value })} />
     </label>
   );
@@ -43,32 +47,55 @@ export function PlanPanel({ plan, hasBox, inputs, onInputs, onClearBox }: {
         ? <button type="button" className="lr-link" onClick={onClearBox}>Clear box</button>
         : <p className="secondary lr-hint">Drag on the map to draw a box.</p>}
 
+      <label className="lr-toggle lr-lighting-hotspot-toggle secondary">
+        <input type="checkbox" checked={showLightingHotspots} onChange={(e) => onShowLightingHotspots(e.target.checked)} />
+        Show lighting hotspots
+      </label>
+      {showLightingHotspots && (
+        <div className="lr-hint">
+          <span>{HOTSPOT_MIN_POSTS}+ proposed posts in the map-wide {gbpShort(PLAN_DEFAULTS.budget)} plan.</span>
+          {hotspots == null ? <p className="lr-hint" role="status">Loading lighting hotspots…</p>
+            : hotspots.length === 0 ? <p className="lr-hint">No streets meet this threshold.</p> : (
+              <details>
+                <summary>{hotspots.length} hotspot streets and paths</summary>
+                <ol className="lr-list">
+                  {hotspots.map(({ name, lights, segmentIds }) => (
+                    <li key={segmentIds[0]}><div><span>{name ?? "Unnamed segment"}</span><span className="data">{lights} posts</span></div></li>
+                  ))}
+                </ol>
+              </details>
+            )}
+        </div>
+      )}
+
       <div className="lr-fields">
-        {field("budget", "Budget (£)", "e.g. 50000")}
-        {field("costPerLight", "Cost per light (£)", "e.g. 2000")}
-        {field("spacingM", "Light spacing (m)", "e.g. 30")}
+        {field("budget", "Budget (£)")}
+        {field("costPerLight", "Cost per lamp post (£)")}
+        {field("spacingM", "Lamp spacing (m)")}
       </div>
+      {lampError && <p className="lr-warn" role="status">Council lamp records are unavailable. Check for existing posts at the proposed sites.</p>}
 
       {plan && (
         <>
           <div className="lr-stats">
-            <Stat value={String(plan.picks.length)} label="streets" />
+            <Stat value={String(plan.lamps.length)} label="proposed lamps" />
             <Stat value={gbpShort(plan.spend)} label="spend" />
             <Stat value={plan.scoreBefore == null || plan.scoreAfter == null ? "—"
-              : `+${(plan.scoreAfter - plan.scoreBefore).toFixed(1)}`} label="area score" />
+              : `+${(plan.scoreAfter - plan.scoreBefore).toFixed(1)}`} label="estimated score gain" />
           </div>
 
           <h2 className="micro">Light first</h2>
-          {plan.picks.length === 0 ? <p className="secondary lr-hint">Nothing fits this budget.</p> : (
+          {plan.picks.length === 0 ? <p className="secondary lr-hint">No eligible lamp sites fit this area and budget.</p> : (
             <ol className="lr-list">
               {plan.picks.map((p) => (
                 <li key={p.segment_id}><div>
                   <span>{p.name ?? "Unnamed"}</span>
-                  <span className="data secondary">{p.lights} {p.lights === 1 ? "light" : "lights"} · {gbp(p.cost)}</span>
+                  <span className="data secondary">{p.lights} {p.lights === 1 ? "lamp" : "lamps"} · {gbp(p.cost)}</span>
                 </div></li>
               ))}
             </ol>
           )}
+          {plan.lamps.length > 0 && <p className="lr-hint">White dots mark suggested sites along the street. Check exact placement on site.</p>}
           <button type="button" className="lr-button" style={{ width: "100%" }} disabled={plan.picks.length === 0}
             onClick={() => downloadWorksOrder(plan, inputs)}>
             Download works order (CSV)

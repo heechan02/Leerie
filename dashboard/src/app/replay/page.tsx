@@ -5,7 +5,7 @@ import { NightReplay } from "@/components/leerie/NightReplay";
 import type { NightJourney, ReplayDiagnostics } from "@/lib/leerie/replay";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Leerie · A night on foot" };
+export const metadata = { title: "Leerie · Night replay" };
 
 export default async function ReplayPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const raw = (await searchParams).view === "raw";

@@ -196,6 +196,8 @@ a { color: inherit; }
 /* Plan mode */
 .lr-plan { display: grid; gap: var(--s3); }
 .lr-plan h2 { margin: var(--s3) 0 0; }
+.lr-lighting-hotspot-toggle { justify-content: flex-start; gap: var(--s2); justify-self: start; }
+.lr-lighting-hotspot-toggle input { width: 15px; height: 15px; margin: 0; }
 .lr-hint { font-size: var(--t-small); margin: 0; color: var(--ink-2); }
 .lr-fields { display: grid; gap: var(--s2); }
 .lr-field { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: var(--s3); font-size: var(--t-small); }
@@ -236,6 +238,7 @@ a { color: inherit; }
 .lr-dot { display: inline-block; width: 26px; height: 12px; border-radius: var(--r-full); }
 .lr-lampdot { display: inline-block; width: 26px; text-align: center; }
 .lr-lampdot::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: var(--r-full); background: var(--amber-hot); box-shadow: 0 0 6px 2px var(--amber-glow); }
+.lr-lampdot-proposed::before { width: 8px; height: 8px; background: white; box-shadow: 0 0 0 1px var(--night); }
 
 .lr-status { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; max-width: 360px; }
 

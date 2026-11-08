@@ -1,8 +1,8 @@
 "use client";
 // The opening: one still image that slowly zooms in as you scroll, with three lines of the story over it.
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { loadNumbers, type Numbers } from "./numbers";
+import { useEffect, useRef } from "react";
+import { useSurveyNumbers } from "./SurveyNumbers";
 
 // The zoom closes in on her. The source is 1696 px wide, so the zoom stays gentle to stay sharp.
 const HERO = { src: "/hero.webp", focus: "76% 74%", zoom: 0.7 };
@@ -12,9 +12,7 @@ const FADE = 0.08;
 
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
-  const [n, setN] = useState<Numbers | null>(null);
-
-  useEffect(() => { loadNumbers().then(setN, () => setN(null)); }, []);
+  const { numbers: n } = useSurveyNumbers();
 
   useEffect(() => {
     const el = ref.current;
@@ -78,10 +76,10 @@ export function Hero() {
           <h2 className="display ld-h2">Mapped street by street.</h2>
           <p className="ld-lede">
             {n ? (
-              <>In one night we measured <b className="data">{n.measured}</b> streets with{" "}
+              <>In one night we measured <b className="data">{n.measured.toLocaleString("en-GB")}</b> street segments with{" "}
                 <b className="data">{n.readings.toLocaleString("en-GB")}</b> readings, and predicted{" "}
                 <b className="data">{n.predicted.toLocaleString("en-GB")}</b> more from their neighbours.</>
-            ) : "In one night we measured the streets between George Square and King's Buildings, and predicted the rest."}
+            ) : "See where we measured light across Edinburgh and where nearby readings support an estimate."}
           </p>
           <Link className="lr-button" href="/map">See the map</Link>
         </div>

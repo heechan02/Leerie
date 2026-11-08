@@ -4,7 +4,7 @@ Run from the repo root:  python3 -m pipeline.run
 Needs SUPABASE_URL and SUPABASE_SECRET_KEY in .env (the app's key cannot read rows).
 
 shortcut: segments are whole OSM ways (not split at junctions), matching ignores walking bearing,
-no phone calibration, prediction is the mean of measured neighbours within 150 m, C (SIMD) is null.
+no phone calibration, C (SIMD) is null.
 Upgrade to OSMnx segments + the brief's model once pandas/osmnx are installed.
 """
 
@@ -20,7 +20,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 MAX_ACCURACY_M = 15
 MATCH_M = 15
-NEIGHBOUR_M = 150
+NEIGHBOUR_M = 75
+REFERENCE_NEIGHBOURS = 7
+PREDICTION_NEIGHBOURS = 3
 MIN_ROWS = 3
 LAMP_M = 20  # a lamp within 20 m lights this street
 LAMP_SEARCH_M = 200  # nearest_lamp_m is null beyond this
@@ -83,6 +85,56 @@ def pct(values: list[float], q: float) -> float:
     return s[min(len(s) - 1, int(q * len(s)))]
 
 
+def midpoint(ps):
+    """Point halfway along a way by distance, regardless of vertex spacing."""
+    edges = [(a, b, math.dist(a, b)) for a, b in zip(ps, ps[1:])]
+    remaining = sum(length for _, _, length in edges) / 2
+    for a, b, length in edges:
+        if length > 0 and remaining <= length:
+            return tuple(x + (y - x) * remaining / length for x, y in zip(a, b))
+        remaining -= length
+    return ps[-1]
+
+
+def local_light(centres, measured):
+    """Compare raw log-light with nearby measurements on each street's own scale."""
+    stops, lo, hi, expected, light, light_lo = {}, {}, {}, {}, {}, {}
+    for i, centre in enumerate(centres):
+        neighbours = []
+        for j, (med, _, _, _, _) in measured.items():
+            if i != j:
+                distance = math.dist(centre, centres[j])
+                if distance <= NEIGHBOUR_M:
+                    neighbours.append((distance, j, med))
+        near = [med for _, _, med in sorted(neighbours)[:REFERENCE_NEIGHBOURS]]
+        if len(near) < (1 if i in measured else 2):
+            continue
+
+        if i in measured:
+            med, low, high, _, _ = measured[i]
+            reference = [*near, med]
+        else:
+            closest = near[:PREDICTION_NEIGHBOURS]
+            med = statistics.median(closest)
+            spread = statistics.pstdev(closest) + 1
+            low, high = med - spread, med + spread
+            reference = near
+
+        baseline = statistics.median(reference)
+        stops[i], lo[i], hi[i] = med - baseline, low - baseline, high - baseline
+        expected[i] = statistics.median(near) - baseline
+        light[i] = percentile_rank(med, reference)
+        light_lo[i] = percentile_rank(low, reference)
+    return stops, lo, hi, expected, light, light_lo
+
+
+def percentile_rank(value, reference):
+    """Fraction of the reference below the value, with ties at their midpoint."""
+    below = sum(sample < value for sample in reference)
+    tied = sum(sample == value for sample in reference)
+    return (below + tied / 2) / len(reference)
+
+
 def should_inspect(lamps_per_100m: float | None, median_lamps: float, stops: float | None, expected: float | None) -> bool:
     """Lamped at least like a typical measured street, yet 2+ stops darker than its measured neighbours."""
     if lamps_per_100m is None or stops is None or expected is None:
@@ -132,11 +184,12 @@ def main() -> None:
         return best
 
     # Match and aggregate: median log2 per (segment, session), then median over sessions.
-    per = {}
+    per, locations = {}, {}
     for p, session, lb in clean:
         i = nearest(p)
         if i is not None:
             per.setdefault(i, {}).setdefault(session, []).append(lb)
+            locations.setdefault(i, []).append(p)
     measured = {}
     for i, sessions in per.items():
         rows = [v for vs in sessions.values() for v in vs]
@@ -145,23 +198,10 @@ def main() -> None:
                            pct(rows, 0.1), pct(rows, 0.9), len(rows), len(sessions))
     if not measured:
         raise SystemExit(f"No segment has {MIN_ROWS}+ clean readings yet ({len(readings)} rows, {len(clean)} clean).")
-    ref = statistics.median(m[0] for m in measured.values())
-
-    # Predict: mean of measured neighbours within 150 m (by way midpoint), interval widened by 1 stop.
-    mid = [ps[len(ps) // 2] for ps in pts]
-    stops, lo, hi, expected = {}, {}, {}, {}
-    for i, (med, p10, p90, _, _) in measured.items():
-        stops[i], lo[i], hi[i] = med - ref, p10 - ref, p90 - ref
-    for i in range(len(ways)):
-        near = [stops[j] for j in measured if j != i and math.dist(mid[i], mid[j]) <= NEIGHBOUR_M]
-        if near:
-            expected[i] = statistics.mean(near)  # out-of-sample for measured streets: never includes itself
-        if i in measured:
-            continue
-        if near:
-            m = statistics.mean(near)
-            spread = (statistics.pstdev(near) if len(near) > 1 else 0) + 1
-            stops[i], lo[i], hi[i] = m, m - spread, m + spread
+    # Anchor measured ways to where they were actually sampled, which can be far from their midpoint.
+    centres = [tuple(map(statistics.median, zip(*locations[i]))) if i in measured else midpoint(ps)
+               for i, ps in enumerate(pts)]
+    stops, lo, hi, expected, L, L_lo = local_light(centres, measured)
 
     # Reports: uncomfortable taps within 15 m; confirmed once two different sessions agree.
     reports = {}
@@ -170,10 +210,6 @@ def main() -> None:
             i = nearest(xy(*point(r["location"])))
             if i is not None:
                 reports.setdefault(i, []).append(r["session_id"])
-
-    def rank(values: dict) -> dict:
-        order = sorted(values, key=values.get)
-        return {k: (n / (len(order) - 1) if len(order) > 1 else 0.5) for n, k in enumerate(order)}
 
     # Lamps: council lighting columns (pipeline/lamps.py), bucketed on a 50 m grid.
     grid = {}
@@ -185,7 +221,6 @@ def main() -> None:
     per_100m = [100 * len(near) / length if length > 0 else None for (_, near), length in zip(lamps, lengths)]
     median_lamps = statistics.median([per_100m[i] for i in measured if per_100m[i]] or [0])
 
-    L, L_lo = rank(stops), rank(lo)
     feats = []
     for i, w in enumerate(ways):
         t = w.get("tags", {})
@@ -219,10 +254,12 @@ def main() -> None:
         })
     # Write then rename, so the live dashboard never reads a half-written file.
     tmp = DATA / "segments.geojson.tmp"
-    tmp.write_text(json.dumps({"type": "FeatureCollection", "recording_selection": SELECTION, "features": feats}))
+    tmp.write_text(json.dumps({"type": "FeatureCollection", "recording_selection": SELECTION,
+                               "light_reference_radius_m": NEIGHBOUR_M, "features": feats}))
     tmp.replace(DATA / "segments.geojson")
     print(f"{len(readings)} readings, {len(clean)} clean, {sum(len(v) for s in per.values() for v in s.values())} matched; "
-          f"{len(measured)} segments measured, {len(stops) - len(measured)} predicted, {len(incidents)} reports -> data/segments.geojson")
+          f"{len(measured)} segments measured, {len(stops.keys() - measured.keys())} predicted, "
+          f"{len(incidents)} reports -> data/segments.geojson")
 
 
 if __name__ == "__main__":
