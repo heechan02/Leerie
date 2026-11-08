@@ -7,17 +7,14 @@ import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { buildMapStyle } from "@/lib/map/style";
 import { NIGHT } from "@/lib/map/tokens";
+import { HoverCard } from "./HoverCard";
+import { Legend } from "./Legend";
 import { DEFAULT_WEIGHTS, score, type Weights } from "./score";
+import type { SegmentProps as Props } from "./types";
+import { WeightSliders } from "./WeightSliders";
 
 if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
-type Props = {
-  segment_id: string; name: string | null; highway: string; measured: boolean;
-  n_readings: number; passes: number; length_m: number;
-  brightness_stops: number | null; brightness_lo: number | null; brightness_hi: number | null;
-  L: number | null; R: number; C: number | null; score: number | null; inspect?: boolean; forecast?: boolean;
-  lamps_per_100m?: number | null;
-};
 type Segments = GeoJSON.FeatureCollection<GeoJSON.LineString, Props>;
 
 const CENTER: [number, number] = [-3.181, 55.934]; // between George Square and King's Buildings
@@ -31,13 +28,13 @@ async function loadSegments(): Promise<{ data: Segments; source: string }> {
   throw new Error("No segments file in data/.");
 }
 
-const stops = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}`);
+type Hover = { street: Props; x: number; y: number; width: number; height: number };
 
 export function ScanMap() {
   const [loaded, setLoaded] = useState<{ data: Segments; source: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
-  const [hover, setHover] = useState<Props | null>(null);
+  const [hover, setHover] = useState<Hover | null>(null);
   const mapRef = useRef<MapRef>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -84,13 +81,14 @@ export function ScanMap() {
 
   const onHover = (e: MapLayerMouseEvent) => {
     const f = e.features?.[0];
-    setHover(f ? (f.properties as Props) : null);
+    const box = e.target.getContainer();
+    setHover(f ? { street: f.properties as Props, x: e.point.x, y: e.point.y, width: box.clientWidth, height: box.clientHeight } : null);
   };
-  const hoverScore = hover ? score(hover, weights) : null;
+  const isFake = loaded?.source.includes("fake") ?? false;
 
   return (
-    <main style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", height: "100vh" }}>
-      <section style={{ position: "relative", minWidth: 0, background: NIGHT.ground }}>
+    <main className="night">
+      <section className="lr-map" aria-label="Map of streets coloured by score">
         <Map
           ref={mapRef}
           onLoad={() => setMapReady(true)}
@@ -115,7 +113,7 @@ export function ScanMap() {
                     ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit]],
                   // Measured solid, predicted faded, no estimate barely there.
                   "line-opacity": ["case", ["get", "measured"], 1, ["==", ["get", "_score"], null], 0.25, 0.4],
-                  "line-width": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "measured"], 2, 1], 17, ["case", ["get", "measured"], 7, 3]],
+                  "line-width": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "measured"], 2.5, 1], 17, ["case", ["get", "measured"], 8, 3]],
                 }}
               />
               {/* Wide invisible line so thin streets are easy to hover. */}
@@ -125,85 +123,63 @@ export function ScanMap() {
           )}
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
-        {error && (
-          <p className="data" style={{ position: "absolute", top: 16, left: 16, color: NIGHT.ink }}>{error}</p>
+        <Legend />
+        {hover && <HoverCard {...hover} weights={weights} />}
+        {!loaded && (
+          <div className="lr-card lr-status" role={error ? "alert" : "status"}>
+            {error ? (
+              <>
+                <strong>Could not load street data</strong>
+                <p className="secondary" style={{ margin: "var(--s1) 0 0", fontSize: "var(--t-small)" }}>{error} Run the pipeline, then reload.</p>
+              </>
+            ) : (
+              <span className="secondary">Loading street light data…</span>
+            )}
+          </div>
         )}
       </section>
 
-      <aside style={{ background: "var(--surface)", borderLeft: "1px solid var(--rule)", padding: "var(--s5)", overflowY: "auto", display: "grid", gap: "var(--s5)", alignContent: "start" }}>
+      <aside className="lr-panel">
         <header>
-          <h1 style={{ fontSize: "var(--t-title)" }}>Leerie</h1>
-          <p className="secondary" style={{ margin: "var(--s1) 0 0", fontSize: "var(--t-small)" }}>
-            Measured night light on Edinburgh streets, George Square to King&apos;s Buildings.
+          <div className="lr-brand">
+            <span className="lr-lamp" aria-hidden />
+            <h1 style={{ fontSize: "var(--t-title)", letterSpacing: "-0.01em" }}>Leerie</h1>
+          </div>
+          <p className="lr-quote">
+            Every council knows where its lamps are. Nobody measures the light that reaches the pavement.
           </p>
-          {loaded && (
-            <p className="micro secondary" style={{ marginTop: "var(--s2)" }}>
-              Source: data/{loaded.source}{loaded.source.includes("fake") ? " (placeholder values)" : ""}
-            </p>
-          )}
+          <p className="micro secondary" style={{ marginTop: "var(--s2)" }}>Edinburgh · George Square to King&apos;s Buildings</p>
         </header>
 
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--s2)" }}>
-          <Stat value={String(counts.measured)} label="streets measured" />
-          <Stat value={String(counts.predicted)} label="streets predicted" />
-          <Stat value={counts.km.toFixed(1)} unit="km" label="measured" />
+        <section className="lr-stats" aria-label="Coverage" aria-busy={!loaded}>
+          <StatCard value={String(counts.measured)} label="streets measured" loading={!loaded} />
+          <StatCard value={String(counts.predicted)} label="streets predicted" loading={!loaded} />
+          <StatCard value={counts.km.toFixed(1)} label="km measured" loading={!loaded} />
         </section>
 
-        <section>
-          <h2 className="micro">Hovered street</h2>
-          {hover ? (
-            <dl className="data" style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "var(--s1) var(--s3)", margin: "var(--s2) 0 0", fontSize: "var(--t-small)" }}>
-              <dt>Street</dt><dd style={{ margin: 0 }}>{hover.name ?? "unnamed"} · {hover.highway}</dd>
-              <dt>Status</dt><dd style={{ margin: 0 }}>{hover.measured ? `measured, ${hover.passes} passes, ${hover.n_readings} readings` : hover.L == null ? "not walked, no estimate yet" : "predicted from measured neighbours"}</dd>
-              <dt>Light</dt><dd style={{ margin: 0 }}>{stops(hover.brightness_stops)} stops ({stops(hover.brightness_lo)} to {stops(hover.brightness_hi)}, 80%)</dd>
-              <dt>L light</dt><dd style={{ margin: 0 }}>{hover.L == null ? "unknown" : `${hover.L.toFixed(2)} × ${weights.L.toFixed(2)}`}</dd>
-              <dt>R reports</dt><dd style={{ margin: 0 }}>{hover.R.toFixed(2)} → (1 − R) × {weights.R.toFixed(2)}</dd>
-              <dt>C area crime</dt><dd style={{ margin: 0 }}>{hover.C == null ? "unknown" : hover.C.toFixed(2)} → (1 − C) × {weights.C.toFixed(2)}</dd>
-              <dt>Score</dt><dd style={{ margin: 0, fontWeight: 600 }}>{hoverScore == null ? "no estimate" : `${hoverScore.toFixed(0)} / 100`}</dd>
-              {hover.inspect && (<><dt>Flag</dt><dd style={{ margin: 0 }}>lamped but darker than expected</dd></>)}
-            </dl>
-          ) : (
-            <p className="secondary" style={{ fontSize: "var(--t-small)", margin: "var(--s2) 0 0" }}>Hover or tap a street to see its inputs.</p>
-          )}
-        </section>
+        <WeightSliders weights={weights} onChange={setWeights} />
 
-        <section>
-          <h2 className="micro">Score weights</h2>
-          <p className="secondary" style={{ fontSize: "var(--t-small)", margin: "var(--s1) 0 var(--s2)" }}>
-            Our choice, not a finding. Move them to see how the map changes.
+        <p className="secondary" style={{ fontSize: "var(--t-small)", margin: 0 }}>
+          Hover or tap a street to see why it scores what it does. Solid streets were walked; faded ones are predicted
+          from measured neighbours.
+        </p>
+
+        <footer style={{ display: "grid", gap: "var(--s2)" }}>
+          {isFake && <p className="lr-warn" role="status" style={{ margin: 0 }}>Placeholder data in use: these are not real readings.</p>}
+          <p className="lr-source" style={{ margin: 0 }}>
+            Source: <span className="data">data/{loaded?.source ?? "…"}</span>. Light is relative to the median street, not lux.
           </p>
-          {(["L", "R", "C"] as const).map((k) => (
-            <label key={k} style={{ display: "grid", gridTemplateColumns: "110px 1fr 36px", alignItems: "center", gap: "var(--s2)", fontSize: "var(--t-small)" }}>
-              {{ L: "Light", R: "Reports", C: "Area crime" }[k]}
-              <input type="range" min={0} max={1} step={0.05} value={weights[k]}
-                onChange={(e) => setWeights({ ...weights, [k]: Number(e.target.value) })} />
-              <span className="data">{weights[k].toFixed(2)}</span>
-            </label>
-          ))}
-        </section>
-
-        <section>
-          <h2 className="micro">Legend</h2>
-          <div style={{ height: 10, borderRadius: "var(--r-full)", margin: "var(--s2) 0 var(--s1)", background: `linear-gradient(90deg, ${NIGHT.dim}, ${NIGHT.mid}, ${NIGHT.lit})` }} />
-          <div className="data secondary" style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-micro)" }}>
-            <span>score 0</span><span>50</span><span>100</span>
-          </div>
-          <p className="secondary" style={{ fontSize: "var(--t-small)", margin: "var(--s2) 0 0" }}>
-            Solid: measured. Faded: predicted. Light is relative (stops: +1 = twice the median street), not lux.
-          </p>
-        </section>
+        </footer>
       </aside>
     </main>
   );
 }
 
-function Stat({ value, unit, label }: { value: string; unit?: string; label: string }) {
+function StatCard({ value, label, loading }: { value: string; label: string; loading: boolean }) {
   return (
-    <div>
-      <div className="data" style={{ fontSize: "var(--t-lead)", fontWeight: 600 }}>
-        {value}{unit && <span className="secondary" style={{ fontSize: "var(--t-micro)" }}> {unit}</span>}
-      </div>
-      <div className="secondary" style={{ fontSize: "var(--t-micro)" }}>{label}</div>
+    <div className="lr-stat">
+      <div className={`data lr-stat-value${loading ? " lr-skeleton" : ""}`}>{loading ? "00" : value}</div>
+      <div className="lr-stat-label">{label}</div>
     </div>
   );
 }
