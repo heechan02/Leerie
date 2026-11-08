@@ -33,14 +33,12 @@
   Put `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `DEVICE_MODEL=iphone-<model>` in `sensor/.env` (gitignored), then
   `flutter run --release --dart-define-from-file=.env`. Give each phone its own `DEVICE_MODEL`: calibration is per label.
 
-## Starting code
-- `sensor/` has no `ios/` folder. Generate one with `flutter create . --platforms ios`, then add
-  `NSCameraUsageDescription` and `NSLocationWhenInUseUsageDescription` to `ios/Runner/Info.plist`.
-  On iOS, change the luminance lookup in `luminance.dart` to video range: `(v-16)/219`.
-- `dashboard/` is Next.js 16 + MapLibre + zustand, and runs on synthetic data with no `.env.local`.
-  Reuse `components/console/map/RouteLayer.tsx`, `DispatchSheet.tsx` (planner layout) and `lib/map/style.ts`.
-  Clients read `*_map` views, because PostgREST returns geography as hex WKB.
-- Drop: the accelerometer/vision detectors, `contractor/`, `/api/plan-route` (OSRM), `/api/dispatch` (Resend) and the crew pages.
+## Leerie: where this started (github.com/heechan02/Leerie)
+- The dashboard is now only the Leerie screens: `src/app/page.tsx` renders `components/leerie/ScanMap.tsx`,
+  with planner logic in `src/lib/leerie/` and the map style in `src/lib/map/`. It needs no env vars and reads
+  only `data/` files (copied to `public/data` by `scripts/copy-maplibre-worker.mjs`).
+- Leerie's console, crew pages, `/api/dispatch` (Resend) and `/api/plan-route` (OSRM) were deleted; they are
+  in git history before commit "Remove Leerie dashboard code" if anything needs reviving.
 
 ## The one shared contract
 Everything downstream reads `data/segments.geojson`, one feature per OSM street segment.
