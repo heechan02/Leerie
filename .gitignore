@@ -30,3 +30,4 @@ sensor/android/.gradle/
 
 # superpowers scratch
 .superpowers/
+__pycache__/
