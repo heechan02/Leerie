@@ -49,8 +49,8 @@ class VerticalHairline extends StatelessWidget {
   Widget build(BuildContext context) => Container(width: 1, color: color);
 }
 
-/// A Condensed numeral over a micro label. Units are set separately at 55% ink so
-/// the numeral column stays clean.
+/// One stat tile: a tabular numeral over a small label. Units sit beside the
+/// numeral in dim ink so the number stays clean.
 class MetricCell extends StatelessWidget {
   const MetricCell({
     super.key,
@@ -65,47 +65,54 @@ class MetricCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(BchSpace.s3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Flexible(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: BchType.metric,
-                ),
+    return Semantics(
+      container: true,
+      label: '$label: $value${unit == null ? '' : ' $unit'}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: BchSpace.s3, vertical: BchSpace.s2),
+        decoration: const BoxDecoration(
+          color: BchColor.surface,
+          borderRadius: BchRadius.lgAll,
+          border: Border.fromBorderSide(BorderSide(color: BchColor.divider)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: <Widget>[
+                  Text(value, maxLines: 1, style: BchType.metric),
+                  if (unit != null) ...<Widget>[
+                    const SizedBox(width: BchSpace.s1),
+                    Text(unit!, style: BchType.caption),
+                  ],
+                ],
               ),
-              if (unit != null) ...<Widget>[
-                const SizedBox(width: BchSpace.s1),
-                Text(unit!, style: BchType.caption),
-              ],
-            ],
-          ),
-          const SizedBox(height: BchSpace.s2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: BchType.metricLabel,
-          ),
-        ],
+            ),
+            const SizedBox(height: BchSpace.s1),
+            Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: BchType.metricLabel,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Equal-width metric cells divided by hairlines. Fixed height rather than
-/// intrinsic, so a metric growing a digit never moves the panel below it.
+/// Equal-width stat tiles. Fixed height rather than intrinsic, so a metric
+/// growing a digit never moves the panel below it.
 class MetricRow extends StatelessWidget {
-  const MetricRow({super.key, required this.cells, this.height = 78});
+  const MetricRow({super.key, required this.cells, this.height = 64});
 
   final List<Widget> cells;
   final double height;
@@ -114,7 +121,7 @@ class MetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[];
     for (var i = 0; i < cells.length; i++) {
-      if (i > 0) children.add(const VerticalHairline());
+      if (i > 0) children.add(const SizedBox(width: BchSpace.s2));
       children.add(Expanded(child: cells[i]));
     }
     return SizedBox(
@@ -216,7 +223,8 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
-/// The only looping animation in the product.
+/// The only looping animation in the product. Holds still when the system asks
+/// for reduced motion.
 class LiveDot extends StatefulWidget {
   const LiveDot({
     super.key,
@@ -240,19 +248,24 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   );
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.active) _controller.repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
   }
 
   @override
   void didUpdateWidget(covariant LiveDot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating) {
+    _sync();
+  }
+
+  void _sync() {
+    final animate = widget.active && !MediaQuery.disableAnimationsOf(context);
+    if (animate && !_controller.isAnimating) {
       _controller.repeat(reverse: true);
-    } else if (!widget.active && _controller.isAnimating) {
+    } else if (!animate && _controller.isAnimating) {
       _controller.stop();
-      _controller.value = 1;
+      _controller.value = 0;
     }
   }
 
@@ -297,7 +310,13 @@ double luminanceStops(double luminance) =>
 double meterFraction(double stops) =>
     ((stops - kMeterMinStops) / (kMeterMaxStops - kMeterMinStops)).clamp(0.0, 1.0);
 
-/// The live light reading: a large number in stops and a bar that moves with it.
+String formatStops(double stops) =>
+    '${stops >= 0 ? '+' : '\u2212'}${stops.abs().toStringAsFixed(1)}';
+
+/// The live light reading as a street lamp: a disc whose amber glow follows the
+/// stops (dark is a dim ember, bright a hot amber), the number in its centre,
+/// and the -6..+6 bar under it. Needs a bounded height; the lamp takes what the
+/// bar and captions leave.
 class LightMeter extends StatelessWidget {
   const LightMeter({
     super.key,
@@ -319,67 +338,162 @@ class LightMeter extends StatelessWidget {
   Widget build(BuildContext context) {
     final lum = luminance;
     final stops = lum == null ? null : luminanceStops(lum);
-    return Padding(
-      padding: const EdgeInsets.all(BchSpace.s4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const PanelLabel(
-            'Light',
-            trailing: Text('relative, not lux', style: BchType.caption),
-          ),
-          const SizedBox(height: BchSpace.s2),
-          if (stops == null)
-            SizedBox(
-              height: BchType.hero.fontSize,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(emptyMessage, style: BchType.inspectorTitle),
+    final motion = MediaQuery.disableAnimationsOf(context) ? Duration.zero : BchMotion.state;
+    return Semantics(
+      container: true,
+      label: 'Light meter, relative brightness, not lux',
+      value: stops == null ? emptyMessage : '${formatStops(stops)} stops',
+      excludeSemantics: true,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: stops == null ? 0 : meterFraction(stops)),
+        duration: motion,
+        curve: BchMotion.ease,
+        builder: (context, t, _) => Column(
+          children: <Widget>[
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final size = math.max(0.0, math.min(box.maxWidth * 0.72, box.maxHeight));
+                  return Center(
+                    child: SizedBox.square(
+                      dimension: size,
+                      child: _Lamp(t: stops == null ? null : t, child: _readout(stops)),
+                    ),
+                  );
+                },
               ),
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: <Widget>[
-                Text(
-                  '${stops >= 0 ? '+' : '\u2212'}${stops.abs().toStringAsFixed(1)}',
-                  style: BchType.hero,
+            ),
+            const SizedBox(height: BchSpace.s2),
+            const Text('relative brightness, not lux', style: BchType.caption),
+            const SizedBox(height: BchSpace.s2),
+            _bar(stops == null ? null : t),
+            if (detail != null)
+              Text(detail!, maxLines: 1, overflow: TextOverflow.ellipsis, style: BchType.caption),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _readout(double? stops) {
+    if (stops == null) {
+      return Padding(
+        padding: const EdgeInsets.all(BchSpace.s4),
+        child: Text(
+          emptyMessage,
+          textAlign: TextAlign.center,
+          style: BchType.rowPrimary.copyWith(color: BchColor.dim),
+        ),
+      );
+    }
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Padding(
+        padding: const EdgeInsets.all(BchSpace.s3),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(formatStops(stops), style: BchType.hero),
+            Text('STOPS', style: BchType.micro.copyWith(color: BchColor.accent800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bar(double? t) {
+    return Column(
+      children: <Widget>[
+        ClipRRect(
+          borderRadius: BchRadius.smAll,
+          child: Container(
+            height: BchFrame.meterBarH,
+            width: double.infinity,
+            color: BchColor.neutral300,
+            child: t == null
+                ? null
+                : FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: t,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: <Color>[BchColor.live, BchColor.hot]),
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: BchSpace.s1),
+        Row(
+          children: <Widget>[
+            Text('dark  \u2212${(-kMeterMinStops).round()}', style: BchType.caption),
+            const Spacer(),
+            Text('+${kMeterMaxStops.round()}  bright', style: BchType.caption),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The lamp itself. [t] is the meter fraction 0..1, or null for no reading.
+class _Lamp extends StatelessWidget {
+  const _Lamp({required this.t, required this.child});
+
+  final double? t;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = t ?? 0;
+    final glow = Color.lerp(BchColor.live, BchColor.hot, lit)!;
+    final strength = t == null ? 0.0 : 0.18 + 0.62 * lit;
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        // The halo: a radial wash that grows stronger with the light.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: <Color>[
+                glow.withValues(alpha: strength),
+                glow.withValues(alpha: strength * 0.3),
+                glow.withValues(alpha: 0),
+              ],
+              // The disc covers the inner 0.68 of the radius; the halo starts at its rim.
+              stops: const <double>[0.62, 0.8, 1],
+            ),
+          ),
+          child: const SizedBox.expand(),
+        ),
+        FractionallySizedBox(
+          widthFactor: 0.68,
+          heightFactor: 0.68,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const RadialGradient(
+                center: Alignment(0, -0.4),
+                colors: <Color>[BchColor.raised, BchColor.bg],
+              ),
+              border: Border.all(
+                color: t == null
+                    ? BchColor.divider
+                    : glow.withValues(alpha: 0.35 + 0.55 * lit),
+                width: 2,
+              ),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: glow.withValues(alpha: strength * 0.7),
+                  blurRadius: 12 + 36 * lit,
                 ),
-                const SizedBox(width: BchSpace.s2),
-                const Text('stops', style: BchType.rowPrimary),
               ],
             ),
-          const SizedBox(height: BchSpace.s3),
-          ClipRRect(
-            borderRadius: BchRadius.smAll,
-            child: Container(
-              height: BchFrame.meterBarH,
-              color: BchColor.ink12,
-              child: stops == null
-                  ? null
-                  : AnimatedFractionallySizedBox(
-                      duration: BchMotion.state,
-                      curve: BchMotion.ease,
-                      alignment: Alignment.centerLeft,
-                      widthFactor: meterFraction(stops),
-                      child: const ColoredBox(color: BchColor.accent),
-                    ),
-            ),
+            child: Center(child: child),
           ),
-          const SizedBox(height: BchSpace.s1),
-          Row(
-            children: <Widget>[
-              Text('dark  ${kMeterMinStops.round()}', style: BchType.caption),
-              const Spacer(),
-              Text('+${kMeterMaxStops.round()}  bright', style: BchType.caption),
-            ],
-          ),
-          if (detail != null)
-            Text(detail!, maxLines: 1, overflow: TextOverflow.ellipsis, style: BchType.caption),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

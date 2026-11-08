@@ -1,6 +1,7 @@
 // The Leerie scanner. Read at arm's length on a night walk: who is recording,
-// the live light meter, where the camera points, the walk's numbers, the two
-// report buttons and one big Record/Stop control.
+// the live light meter as a glowing street lamp, the walk's numbers, where the
+// camera points, one big Start/Stop pill and the two report buttons at thumb
+// reach.
 
 import 'package:flutter/material.dart';
 
@@ -48,28 +49,38 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BchColor.bg,
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: Listenable.merge(<Listenable>[controller, controller.queue]),
-          builder: (context, _) {
-            return Column(
-              // Header, hairlines, metric row and footer bar are all full-bleed.
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _header(context),
-                const Hairline(),
-                _meter(),
-                const Hairline(),
-                Expanded(child: _preview(context)),
-                const Hairline(),
-                _metrics(),
-                const Hairline(),
-                _status(),
-                _reports(context),
-                _footer(),
-              ],
-            );
-          },
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[BchColor.bgTop, BchColor.bg],
+          ),
+        ),
+        child: SafeArea(
+          child: ListenableBuilder(
+            listenable: Listenable.merge(<Listenable>[controller, controller.queue]),
+            builder: (context, _) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: BchSpace.s4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _header(context),
+                    Expanded(flex: 2, child: _meter()),
+                    const SizedBox(height: BchSpace.s3),
+                    _metrics(),
+                    const SizedBox(height: BchSpace.s3),
+                    Expanded(child: _preview(context)),
+                    _status(),
+                    _footer(),
+                    const SizedBox(height: BchSpace.s3),
+                    _reports(context),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -78,10 +89,9 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
   // ─── Reports ──────────────────────────────────────────────────────────────
 
   Widget _reports(BuildContext context) {
-    const size = Size.fromHeight(BchFrame.actionH);
     final enabled = controller.isRecording;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(BchSpace.s3, 0, BchSpace.s3, BchSpace.s3),
+      padding: const EdgeInsets.only(bottom: BchSpace.s3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -97,29 +107,21 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           Row(
             children: <Widget>[
               Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: size,
-                    foregroundColor: BchColor.text,
-                    side: const BorderSide(color: BchColor.divider),
-                    textStyle: BchType.button,
-                  ),
-                  icon: const Icon(Icons.sentiment_satisfied_alt),
-                  label: const Text('Comfortable'),
+                child: _reportButton(
+                  label: 'Comfortable',
+                  icon: Icons.sentiment_satisfied_alt,
+                  color: BchColor.comfort,
+                  wash: BchColor.comfort12,
                   onPressed: enabled ? () => _send(context, 'comfortable') : null,
                 ),
               ),
               const SizedBox(width: BchSpace.s3),
               Expanded(
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: size,
-                    backgroundColor: BchColor.accent,
-                    foregroundColor: BchColor.bg,
-                    textStyle: BchType.button,
-                  ),
-                  icon: const Icon(Icons.sentiment_dissatisfied),
-                  label: const Text('Uncomfortable'),
+                child: _reportButton(
+                  label: 'Uncomfortable',
+                  icon: Icons.sentiment_dissatisfied,
+                  color: BchColor.live,
+                  wash: BchColor.live12,
                   onPressed: enabled ? () => _pickReason(context) : null,
                 ),
               ),
@@ -127,6 +129,31 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           ),
         ],
       ),
+    );
+  }
+
+  Widget _reportButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color wash,
+    required VoidCallback? onPressed,
+  }) {
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(BchFrame.actionH),
+        padding: const EdgeInsets.symmetric(horizontal: BchSpace.s2),
+        foregroundColor: color,
+        backgroundColor: wash,
+        disabledForegroundColor: BchColor.ink38,
+        disabledBackgroundColor: BchColor.ink3,
+        side: BorderSide(color: onPressed == null ? BchColor.divider : color, width: 1.5),
+        shape: const RoundedRectangleBorder(borderRadius: BchRadius.xlAll),
+        textStyle: BchType.button.copyWith(fontSize: 15),
+      ),
+      icon: Icon(icon, size: 24),
+      label: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
+      onPressed: onPressed,
     );
   }
 
@@ -173,32 +200,40 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     final session = recording
         ? 'Recording${started == null ? '' : ' since ${hhmm(started)}'}'
         : 'Not recording';
-    return Container(
-      height: BchFrame.headerH,
-      color: recording ? BchColor.live24 : BchColor.surface,
-      padding: const EdgeInsets.symmetric(horizontal: BchSpace.s4),
+    return SizedBox(
+      height: BchFrame.headerH + BchSpace.s3,
       child: Row(
         children: <Widget>[
-          LiveDot(
-            active: recording,
-            color: recording ? BchColor.live : BchColor.ink38,
-            size: 16,
-          ),
-          const SizedBox(width: BchSpace.s3),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text('Leerie', style: BchType.consoleTitle),
-                Text(
-                  deviceModel.isEmpty ? session : '$session · $deviceModel',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: BchType.caption.copyWith(
-                    color: recording ? BchColor.text : BchColor.ink58,
-                    fontWeight: recording ? FontWeight.w600 : FontWeight.w400,
-                  ),
+                Semantics(
+                  header: true,
+                  child: const Text('Leerie', style: BchType.wordmark),
+                ),
+                const SizedBox(height: BchSpace.s1),
+                Row(
+                  children: <Widget>[
+                    LiveDot(
+                      active: recording,
+                      color: recording ? BchColor.live : BchColor.ink38,
+                      size: 8,
+                    ),
+                    const SizedBox(width: BchSpace.s2),
+                    Flexible(
+                      child: Text(
+                        deviceModel.isEmpty ? session : '$session · $deviceModel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: BchType.caption.copyWith(
+                          color: recording ? BchColor.text : BchColor.dim,
+                          fontWeight: recording ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -215,13 +250,17 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
                 style: BchType.caption.copyWith(color: BchColor.accent800),
               ),
             ),
-            const SizedBox(width: BchSpace.s2),
+            const SizedBox(width: BchSpace.s1),
           ],
           IconButton(
             onPressed: () => _openSettings(context),
-            icon: const Icon(Icons.tune, size: 20, color: BchColor.ink72),
+            icon: const Icon(Icons.tune, size: 22, color: BchColor.ink72),
             tooltip: 'Settings',
-            visualDensity: VisualDensity.compact,
+            style: IconButton.styleFrom(
+              minimumSize: const Size.square(48),
+              backgroundColor: BchColor.surface,
+              side: const BorderSide(color: BchColor.divider),
+            ),
           ),
         ],
       ),
@@ -232,7 +271,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BchColor.bg,
+      backgroundColor: BchColor.surface,
       builder: (sheetContext) => SettingsSheet(
         controller: controller,
         // Close the sheet first: the road view is the thing being aimed at, and
@@ -255,7 +294,12 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
         controller.cameraStatus == CameraStatus.ready;
 
     return Container(
-      color: BchColor.neutral200,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: BchColor.surface,
+        borderRadius: BchRadius.xlAll,
+        border: Border.fromBorderSide(BorderSide(color: BchColor.divider)),
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
@@ -264,10 +308,14 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           if (camera != null && ready)
             GestureDetector(
               onTap: () => _openRoadView(context),
-              child: PreviewSurface(
+              child: Semantics(
+                button: true,
+                label: 'Camera view. Tap to open the full road view.',
+                child: PreviewSurface(
                 controller: controller,
                 camera: camera,
                 coordinate: _coordinate(),
+                ),
               ),
             )
           else
@@ -283,7 +331,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
                   const SizedBox(width: BchSpace.s2),
                   Text(
                     controller.cameraStatus.label,
-                    style: BchType.caption.copyWith(color: BchColor.accent800),
+                    style: BchType.caption.copyWith(color: BchColor.text),
                   ),
                 ],
               ),
@@ -331,22 +379,21 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
       _ => 'The camera is not running.',
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(BchSpace.s6),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const PanelLabel('Camera'),
-          const SizedBox(height: BchSpace.s3),
-          Text(detail, style: BchType.body),
-          const SizedBox(height: BchSpace.s4),
-          SecondaryButton(
-            label: 'Try the camera again',
-            icon: Icons.refresh,
-            onPressed: () => controller.start(),
-          ),
-        ],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(BchSpace.s4, 40, BchSpace.s4, BchSpace.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(detail, style: BchType.body),
+            const SizedBox(height: BchSpace.s3),
+            SecondaryButton(
+              label: 'Try the camera again',
+              icon: Icons.refresh,
+              onPressed: () => controller.start(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -355,9 +402,9 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: BchSpace.s3, vertical: 5),
       decoration: const BoxDecoration(
-        color: BchColor.bg,
-        borderRadius: BchRadius.mdAll,
-        boxShadow: BchShadow.sm,
+        color: BchColor.scrim,
+        borderRadius: BchRadius.lgAll,
+        border: Border.fromBorderSide(BorderSide(color: BchColor.divider)),
       ),
       child: child,
     );
@@ -382,6 +429,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
   Widget _metrics() {
     final started = controller.startedAt;
     final recording = controller.isRecording;
+    final gps = controller.lastPosition;
     return MetricRow(
       cells: <Widget>[
         MetricCell(
@@ -399,6 +447,11 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
           unit: 'km',
           label: 'Walked',
         ),
+        MetricCell(
+          value: gps == null ? '—' : '±${gps.accuracy.round()}',
+          unit: gps == null ? null : 'm',
+          label: 'GPS',
+        ),
       ],
     );
   }
@@ -414,8 +467,9 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
         : pending > 0
             ? '${plural(pending, 'upload')} waiting'
             : 'Everything uploaded';
+    final uploadsWarn = error != null || !controller.supabaseConfigured;
     return Padding(
-      padding: const EdgeInsets.all(BchSpace.s3),
+      padding: const EdgeInsets.symmetric(vertical: BchSpace.s2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -427,7 +481,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: BchType.caption.copyWith(
-                color: notice != null ? BchColor.text : BchColor.ink58,
+                color: notice != null ? BchColor.hot : BchColor.dim,
               ),
             ),
           ),
@@ -436,7 +490,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: BchType.caption.copyWith(
-              color: error == null ? BchColor.ink58 : BchColor.text,
+              color: uploadsWarn ? BchColor.live : BchColor.dim,
             ),
           ),
         ],
@@ -450,25 +504,43 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
     final recording = controller.isRecording;
     final busy = controller.recording == RecordingState.starting ||
         controller.recording == RecordingState.stopping;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(BchSpace.s3, 0, BchSpace.s3, BchSpace.s3),
-      child: FilledButton.icon(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(BchFrame.actionH),
-          backgroundColor: recording ? BchColor.live : BchColor.accent,
-          foregroundColor: recording ? BchColor.text : BchColor.bg,
+    final label = busy
+        ? (controller.recording == RecordingState.stopping ? 'Stopping…' : 'Starting…')
+        : (recording ? 'Stop walk' : 'Start walk');
+    final onPressed =
+        busy ? null : (recording ? controller.stopRecording : controller.startRecording);
+    const shape = StadiumBorder();
+    const size = Size.fromHeight(BchFrame.actionH);
+    if (recording) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: size,
+          shape: shape,
+          foregroundColor: BchColor.live,
+          backgroundColor: BchColor.live12,
+          side: const BorderSide(color: BchColor.live, width: 2),
           textStyle: BchType.action,
         ),
-        icon: Icon(recording ? Icons.stop_rounded : Icons.fiber_manual_record, size: 28),
-        label: Text(
-          busy
-              ? (controller.recording == RecordingState.stopping ? 'Stopping…' : 'Starting…')
-              : (recording ? 'Stop recording' : 'Start recording'),
-        ),
-        onPressed: busy
-            ? null
-            : (recording ? controller.stopRecording : controller.startRecording),
+        icon: const LiveDot(color: BchColor.live, size: 12),
+        label: Text(label),
+        onPressed: onPressed,
+      );
+    }
+    return FilledButton.icon(
+      style: FilledButton.styleFrom(
+        minimumSize: size,
+        shape: shape,
+        backgroundColor: BchColor.accent,
+        foregroundColor: BchColor.bg,
+        disabledBackgroundColor: BchColor.accent200,
+        disabledForegroundColor: BchColor.ink58,
+        textStyle: BchType.action,
+        elevation: 0,
+        shadowColor: BchColor.accent,
       ),
+      icon: const Icon(Icons.directions_walk, size: 26),
+      label: Text(label),
+      onPressed: onPressed,
     );
   }
 }

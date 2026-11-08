@@ -1,6 +1,6 @@
 // Material glue. The app draws itself almost entirely from tokens.dart; this
 // only exists so Flutter's own surfaces (ripples, scrollbars, focus rings, the
-// bottom sheet) inherit the same ground, ink and steel.
+// bottom sheet) inherit the same ground, ink and lamp amber.
 
 import 'package:flutter/material.dart';
 
@@ -10,11 +10,11 @@ ThemeData buildLeerieTheme() {
   const scheme = ColorScheme.dark(
     primary: BchColor.accent,
     onPrimary: BchColor.bg,
-    secondary: BchColor.accent700,
+    secondary: BchColor.hot,
     onSecondary: BchColor.bg,
-    surface: BchColor.bg,
+    surface: BchColor.surface,
     onSurface: BchColor.text,
-    error: BchColor.neutral800,
+    error: BchColor.live,
     onError: BchColor.bg,
   );
 
@@ -36,8 +36,8 @@ ThemeData buildLeerieTheme() {
       space: 1,
     ),
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: BchColor.bg,
-      surfaceTintColor: BchColor.bg,
+      backgroundColor: BchColor.surface,
+      surfaceTintColor: BchColor.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: BchRadius.lg),
       ),
@@ -66,14 +66,17 @@ ThemeData buildLeerieTheme() {
       selectionHandleColor: BchColor.accent,
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: BchColor.neutral300,
+      backgroundColor: BchColor.raised,
       contentTextStyle: TextStyle(
         fontFamily: BchType.family,
         fontSize: 15,
         color: BchColor.text,
       ),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BchRadius.mdAll),
+      shape: RoundedRectangleBorder(
+        borderRadius: BchRadius.lgAll,
+        side: BorderSide(color: BchColor.divider),
+      ),
     ),
   );
 }

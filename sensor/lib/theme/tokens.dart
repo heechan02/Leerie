@@ -8,60 +8,74 @@
 
 import 'package:flutter/widgets.dart';
 
-/// Colour. One accent (steel), plus one red that only ever means "recording".
-/// Scales run from the ground (100) to the ink (900), so on this dark theme
-/// 100 is the darkest step.
+/// Colour. Dusk-to-night Edinburgh with one sodium street lamp: the lamp amber is
+/// the accent, ember means "recording" or "uncomfortable", teal means
+/// "comfortable". Scales run from the ground (100) to the ink (900), so on this
+/// dark theme 100 is the darkest step.
 abstract final class BchColor {
-  static const bg = Color(0xFF0E1013);
-  static const surface = Color(0xFF181A1E);
-  static const text = Color(0xFFE2E4E7);
-  static const accent = Color(0xFF8DB2D8);
+  static const bg = Color(0xFF0B0D1A);
 
-  /// Recording. The one status colour, always paired with the word.
-  static const live = Color(0xFFE5484D);
-  static const live24 = Color(0x3DE5484D);
+  /// Top of the dusk gradient behind the console.
+  static const bgTop = Color(0xFF1A1B3A);
+  static const surface = Color(0xFF15172E);
+  static const raised = Color(0xFF1E1F3D);
+  static const text = Color(0xFFECE8F4);
+  static const dim = Color(0xFF9A98B5);
+  static const accent = Color(0xFFF5B54A);
 
-  static const accent100 = Color(0xFF1D2D3D);
-  static const accent200 = Color(0xFF2C455D);
-  static const accent300 = Color(0xFF416180);
-  static const accent400 = Color(0xFF597EA3);
-  static const accent500 = Color(0xFF749DC4);
-  static const accent600 = Color(0xFF94BCE3);
-  static const accent700 = Color(0xFFB5D9FD);
-  static const accent800 = Color(0xFFD6EBFF);
-  static const accent900 = Color(0xFFEEF6FF);
+  /// The lamp at full strength.
+  static const hot = Color(0xFFFFD27A);
 
-  static const neutral100 = Color(0xFF1A1C1F);
-  static const neutral200 = Color(0xFF222428);
-  static const neutral300 = Color(0xFF2E3034);
-  static const neutral400 = Color(0xFF424447);
-  static const neutral500 = Color(0xFF7A7A7D);
-  static const neutral600 = Color(0xFF98989B);
-  static const neutral700 = Color(0xFFB7B7BA);
-  static const neutral800 = Color(0xFFD4D4D7);
-  static const neutral900 = Color(0xFFE7E7EA);
+  /// Recording, and the "uncomfortable" report. Always paired with the word.
+  static const live = Color(0xFFE8743B);
+  static const live24 = Color(0x3DE8743B);
+  static const live12 = Color(0x1FE8743B);
 
-  /// Ink (the `text` colour) at the fixed opacities used throughout the mockup.
-  static const ink72 = Color(0xB8E2E4E7);
-  static const ink58 = Color(0x94E2E4E7);
-  static const ink55 = Color(0x8CE2E4E7);
-  static const ink45 = Color(0x73E2E4E7);
-  static const ink38 = Color(0x61E2E4E7);
-  static const ink12 = Color(0x1FE2E4E7);
-  static const ink7 = Color(0x12E2E4E7);
-  static const ink5 = Color(0x0DE2E4E7);
-  static const ink3 = Color(0x08E2E4E7);
+  /// The "comfortable" report.
+  static const comfort = Color(0xFF7CC6A4);
+  static const comfort12 = Color(0x1F7CC6A4);
 
-  /// Hairlines. Everything is separated by one of these, never by a gap.
-  static const divider = Color(0x29E2E4E7); // ink 16%
+  static const accent100 = Color(0xFF2E2414);
+  static const accent200 = Color(0xFF4A3718);
+  static const accent300 = Color(0xFF7A5A22);
+  static const accent400 = Color(0xFFB0822F);
+  static const accent500 = Color(0xFFD99E3E);
+  static const accent600 = Color(0xFFF5B54A);
+  static const accent700 = Color(0xFFFFC766);
+  static const accent800 = Color(0xFFFFE0A3);
+  static const accent900 = Color(0xFFFFF1D6);
 
-  /// Steel at partial strength: guides, washes and the meter track.
-  static const accent40 = Color(0x668DB2D8);
-  static const accent24 = Color(0x3D8DB2D8);
-  static const accent10 = Color(0x1A8DB2D8);
+  static const neutral100 = Color(0xFF15172E);
+  static const neutral200 = Color(0xFF1E1F3D);
+  static const neutral300 = Color(0xFF2A2B4D);
+  static const neutral400 = Color(0xFF3D3E63);
+  static const neutral500 = Color(0xFF6E6C8C);
+  static const neutral600 = Color(0xFF9A98B5);
+  static const neutral700 = Color(0xFFB9B7CF);
+  static const neutral800 = Color(0xFFD5D2E3);
+  static const neutral900 = Color(0xFFECE8F4);
+
+  /// Ink (the `text` colour) at fixed opacities.
+  static const ink72 = Color(0xB8ECE8F4);
+  static const ink58 = Color(0x94ECE8F4);
+  static const ink55 = Color(0x8CECE8F4);
+  static const ink45 = Color(0x73ECE8F4);
+  static const ink38 = Color(0x61ECE8F4);
+  static const ink12 = Color(0x1FECE8F4);
+  static const ink7 = Color(0x12ECE8F4);
+  static const ink5 = Color(0x0DECE8F4);
+  static const ink3 = Color(0x08ECE8F4);
+
+  /// Hairlines and card outlines.
+  static const divider = Color(0x1AECE8F4); // ink 10%
+
+  /// Lamp amber at partial strength: guides, washes and the meter track.
+  static const accent40 = Color(0x66F5B54A);
+  static const accent24 = Color(0x3DF5B54A);
+  static const accent10 = Color(0x1AF5B54A);
 
   /// Marks drawn over the camera image, where the ground is a photograph.
-  static const scrim = Color(0x8C0E1013);
+  static const scrim = Color(0x8C0B0D1A);
   static const white = Color(0xFFFFFFFF);
   static const white10 = Color(0x1AFFFFFF);
   static const white24 = Color(0x3DFFFFFF);
@@ -84,10 +98,12 @@ abstract final class BchRadius {
   static const sm = Radius.circular(5);
   static const md = Radius.circular(10);
   static const lg = Radius.circular(16);
+  static const xl = Radius.circular(22);
 
   static const smAll = BorderRadius.all(sm);
   static const mdAll = BorderRadius.all(md);
   static const lgAll = BorderRadius.all(lg);
+  static const xlAll = BorderRadius.all(xl);
 }
 
 /// Elevation. Only for things that overlap the map — here, the camera image.
@@ -120,7 +136,7 @@ abstract final class BchFrame {
   static const rowH = 58.0;
   static const rowHCompact = 46.0;
   static const footerH = 68.0;
-  static const meterBarH = 16.0;
+  static const meterBarH = 8.0;
 
   /// Thumb-sized at arm's length, gloved, at night.
   static const actionH = 64.0;
@@ -130,10 +146,22 @@ abstract final class BchFrame {
   static const graticuleStep = 64.0;
 }
 
-/// Type. Inter for both roles; headings at 600. Identifiers, coordinates and
+/// Type. Inter for the UI, a system serif for the wordmark; headings at 600. Identifiers, coordinates and
 /// timestamps are tabular so numbers align down a column.
 abstract final class BchType {
   static const family = 'Inter';
+
+  /// The "Leerie" wordmark: the system serif (Georgia on iOS, Noto Serif on
+  /// Android), since no serif is bundled.
+  static const wordmark = TextStyle(
+    fontFamily: 'Georgia',
+    fontFamilyFallback: <String>['serif', 'Times New Roman'],
+    fontSize: 30,
+    fontWeight: FontWeight.w400,
+    letterSpacing: 0.2,
+    height: 1.05,
+    color: BchColor.text,
+  );
 
   static const consoleTitle = TextStyle(
     fontFamily: family,
@@ -156,10 +184,10 @@ abstract final class BchType {
 
   static const metric = TextStyle(
     fontFamily: family,
-    fontSize: 30,
+    fontSize: 22,
     fontWeight: FontWeight.w600,
     height: 1,
-    letterSpacing: -0.45,
+    letterSpacing: -0.3,
     color: BchColor.text,
     fontFeatures: [FontFeature.tabularFigures()],
   );
@@ -167,7 +195,7 @@ abstract final class BchType {
   /// The live light reading: the number the stage demo is watched by.
   static const hero = TextStyle(
     fontFamily: family,
-    fontSize: 64,
+    fontSize: 58,
     fontWeight: FontWeight.w600,
     height: 1,
     letterSpacing: -1,
@@ -177,10 +205,11 @@ abstract final class BchType {
 
   static const metricLabel = TextStyle(
     fontFamily: family,
-    fontSize: 11.5,
-    fontWeight: FontWeight.w400,
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.6,
     height: 1.3,
-    color: BchColor.ink58,
+    color: BchColor.dim,
   );
 
   static const rowPrimary = TextStyle(
@@ -244,7 +273,7 @@ abstract final class BchType {
     fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.35,
-    color: BchColor.ink58,
+    color: BchColor.dim,
   );
 
   static const micro = TextStyle(

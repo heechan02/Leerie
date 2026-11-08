@@ -71,8 +71,8 @@ void main() {
     await _pump(tester, controller);
 
     expect(find.text('+2.0'), findsOneWidget);
-    expect(find.text('relative, not lux'), findsOneWidget);
-    expect(find.text('Stop recording'), findsOneWidget);
+    expect(find.text('relative brightness, not lux'), findsOneWidget);
+    expect(find.text('Stop walk'), findsOneWidget);
     expect(find.text('Start recording to report how a street feels.'), findsNothing);
 
     if (screenshot == null) return;
