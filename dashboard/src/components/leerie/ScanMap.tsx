@@ -65,8 +65,8 @@ export function ScanMap() {
   const [box, setBox] = useState<Box | null>(null);
   const drawFrom = useRef<[number, number] | null>(null);
   const [inputs, setInputs] = useState<PlanInputs>({ budget: "", costPerLight: "", spacingM: "" });
-  const [showLamps, setShowLamps] = useState(true);
-  const [showLight, setShowLight] = useState(true);
+  // One layer at a time: lamp dots over coloured streets is too busy to read.
+  const [layer, setLayer] = useState<"light" | "lamps">("light");
 
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   useEffect(() => {
@@ -161,7 +161,7 @@ export function ScanMap() {
           style={{ position: "absolute", inset: 0 }}
           dragRotate={false}
           dragPan={mode === "map"}
-          interactiveLayerIds={["segments-hit"]}
+          interactiveLayerIds={layer === "light" ? ["segments-hit"] : []}
           onMouseDown={onDown}
           onMouseUp={() => { drawFrom.current = null; }}
           onMouseMove={onHover}
@@ -174,7 +174,7 @@ export function ScanMap() {
               <Layer
                 id="segments-line"
                 type="line"
-                layout={{ "line-cap": "round", "line-join": "round", visibility: showLight ? "visible" : "none" }}
+                layout={{ "line-cap": "round", "line-join": "round", visibility: layer === "light" ? "visible" : "none" }}
                 paint={{
                   "line-color": ["case", ["==", ["get", "_score"], null], NIGHT.dim,
                     ["interpolate", ["linear"], ["get", "_score"], 0, NIGHT.dim, 50, NIGHT.mid, 100, NIGHT.lit]],
@@ -196,11 +196,11 @@ export function ScanMap() {
           )}
           {/* Council lamp columns: MapLibre fetches the file itself, only drawn when zoomed in. */}
           <Source id="lamps" type="geojson" data="/data/lamps.geojson">
-            <Layer id="lamps-glow" type="circle" minzoom={13} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+            <Layer id="lamps-glow" type="circle" minzoom={13} layout={{ visibility: layer === "lamps" ? "visible" : "none" }} paint={{
               "circle-color": NIGHT.lamp, "circle-blur": 1, "circle-opacity": 0.35,
               "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 18, 14],
             }} />
-            <Layer id="lamps-dot" type="circle" minzoom={13} layout={{ visibility: showLamps ? "visible" : "none" }} paint={{
+            <Layer id="lamps-dot" type="circle" minzoom={13} layout={{ visibility: layer === "lamps" ? "visible" : "none" }} paint={{
               "circle-color": NIGHT.lit, "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 1, 18, 3],
             }} />
           </Source>
@@ -227,7 +227,7 @@ export function ScanMap() {
           <NavigationControl position="top-left" showZoom={false} visualizePitch={false} />
           <ScaleControl position="bottom-right" maxWidth={80} unit="metric" />
         </Map>
-        <Legend mode={mode} showLamps={showLamps} />
+        <Legend mode={mode} layer={layer} />
         {hover && <HoverCard {...hover} weights={weights} />}
         {!loaded && (
           <div className="lr-card lr-glass lr-status" role={error ? "alert" : "status"}>
@@ -278,15 +278,20 @@ export function ScanMap() {
         )}
 
         <section aria-labelledby="layers-h">
-          <h2 id="layers-h" className="micro">Layers</h2>
-          <label className="lr-toggle" style={{ marginBottom: "var(--s3)" }}>
-            <span>Measured light<small>Our readings, street by street</small></span>
-            <input type="checkbox" checked={showLight} onChange={(e) => setShowLight(e.target.checked)} />
-          </label>
-          <label className="lr-toggle">
-            <span>Council lamp posts<small>City of Edinburgh Council lighting columns</small></span>
-            <input type="checkbox" checked={showLamps} onChange={(e) => setShowLamps(e.target.checked)} />
-          </label>
+          <h2 id="layers-h" className="micro">Show</h2>
+          <div className="lr-tabs" role="radiogroup" aria-labelledby="layers-h">
+            {([["light", "Measured light"], ["lamps", "Council lamps"]] as const).map(([value, label]) => (
+              <button key={value} type="button" role="radio" aria-checked={layer === value} className="lr-tab"
+                onClick={() => { setLayer(value); setHover(null); }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="lr-hint" style={{ marginTop: "var(--s2)", fontSize: "var(--t-micro)" }}>
+            {layer === "light"
+              ? "Our readings, street by street."
+              : "City of Edinburgh Council lighting columns: where the lamps are, not how much light reaches the pavement."}
+          </p>
         </section>
 
         <WeightSliders weights={weights} onChange={setWeights} />

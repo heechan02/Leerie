@@ -168,7 +168,7 @@ a { color: inherit; }
 .lr-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); background: rgb(0 0 0 / 0.25); border: 1px solid var(--line); border-radius: var(--r-full); padding: var(--s1); }
 .lr-tab { background: none; border: 0; border-radius: var(--r-full); padding: var(--s2); color: var(--ink-2); font-size: var(--t-small); font-weight: 600; cursor: pointer; transition: color 150ms, background 150ms; }
 .lr-tab:hover { color: var(--ink); }
-.lr-tab[aria-selected="true"] { background: var(--amber); color: var(--on-amber); box-shadow: 0 0 18px var(--amber-glow); }
+.lr-tab[aria-selected="true"], .lr-tab[aria-checked="true"] { background: var(--amber); color: var(--on-amber); box-shadow: 0 0 18px var(--amber-glow); }
 
 .lr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
 .lr-stat { background: rgb(255 255 255 / 0.03); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s3); }
