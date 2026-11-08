@@ -1,7 +1,7 @@
 -- Night-light safety map schema, from the team brief.
--- Replaces Leerie's migrations, whose demo_all policies were open to anyone.
--- Leerie's hazard clustering trigger (to adapt for hotspots) is in its repo at
--- supabase/migrations/20260901000000_init.sql, github.com/heechan02/Leerie.
+-- Insert-only for anon: no policy lets the apps read rows back.
+-- shortcut: the hotspots table, its trigger on incidents and street_scores were created in the
+-- Supabase SQL editor on 8 Nov and are not in this file; add them here before reusing the schema.
 
 create extension if not exists postgis;
 

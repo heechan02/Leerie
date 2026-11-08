@@ -1,4 +1,4 @@
-// Leerie design tokens, from Leerie's dashboard/src/app/globals.css, inverted for
+// Leerie design tokens, from dashboard/src/app/globals.css, inverted for
 // night use: the scanner is read at 3am, so the ground is near-black and the ink is
 // off-white (never pure white). Spec: docs/design/DESIGN.md. Never hard-code a
 // colour, size, radius, shadow or duration in a widget; take it from here.

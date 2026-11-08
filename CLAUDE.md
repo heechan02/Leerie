@@ -33,12 +33,12 @@
   Put `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `DEVICE_MODEL=iphone-<model>` in `sensor/.env` (gitignored), then
   `flutter run --release --dart-define-from-file=.env`. Give each phone its own `DEVICE_MODEL`: calibration is per label.
 
-## Leerie: where this started (github.com/heechan02/Leerie)
+## Dashboard layout
 - The dashboard is now only the Leerie screens: `src/app/page.tsx` renders `components/leerie/ScanMap.tsx`,
   with planner logic in `src/lib/leerie/` and the map style in `src/lib/map/`. It needs no env vars and reads
   only `data/` files (copied to `public/data` by `scripts/copy-maplibre-worker.mjs`).
-- Leerie's console, crew pages, `/api/dispatch` (Resend) and `/api/plan-route` (OSRM) were deleted; they are
-  in git history before commit "Remove Leerie dashboard code" if anything needs reviving.
+- The original console, crew pages, `/api/dispatch` (Resend) and `/api/plan-route` (OSRM) were deleted; they are
+  in git history before commit 5ae484c if anything needs reviving.
 
 ## The one shared contract
 Everything downstream reads `data/segments.geojson`, one feature per OSM street segment.
@@ -64,7 +64,7 @@ Properties (snake_case; unknown values are `null`, never 0):
 Change this contract only with the whole team's agreement.
 
 ## Rules
-- Privacy: the app can only insert. Dashboards read per-street summaries only, never raw report points or session IDs. Don't copy Leerie's open access rules.
+- Privacy: the app can only insert. Dashboards read per-street summaries only, never raw report points or session IDs. Never open read access to the raw tables.
 - Brightness is relative, not lux. Say so wherever it's shown.
 - The score weights are our choice; show them as adjustable sliders, and show each score's breakdown on hover.
 - Predicted streets are drawn faded; measured streets are drawn solid.
@@ -73,5 +73,5 @@ Change this contract only with the whole team's agreement.
 
 ## Code style
 - Python 3.11, pandas, osmnx, networkx, scikit-learn; `ruff format`.
-- Flutter/Dart as Leerie has it. Next.js App Router, TypeScript strict, MapLibre.
+- Flutter/Dart as the existing code has it. Next.js App Router, TypeScript strict, MapLibre.
 - Commit messages: `[A]` or `[B]` + what changed. Pull before every step, then push to main.

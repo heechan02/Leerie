@@ -19,7 +19,7 @@ Capture works and the database is done; the only missing capture piece is iOS, a
 
 - **Android scanner** (Flutter, Camera2 backend): linearised, exposure-corrected luminance per GPS fix, uploaded to `light_readings` every 20 s. Comfortable/Uncomfortable buttons write to `incidents` (commit c62fd2f, 02:17).
 - **Supabase:** `light_readings`, `incidents`, `hotspots`, `street_scores`. 109 readings at 02:30; the app can only insert.
-- **Dashboard:** Leerie's Next.js 16 + MapLibre console, running on synthetic data.
+- **Dashboard:** Next.js 16 + MapLibre console, running on synthetic data.
 - **Contract:** `data/segments.geojson`, as defined in `CLAUDE.md`.
 
 **What the first 109 readings already tell us**
@@ -84,7 +84,7 @@ Dev A owns everything people touch (phone and screens); Dev B owns everything th
 - **Phone:** Flutter (`sensor/`), one codebase for Android and iOS.
 - **Database:** Supabase Postgres + PostGIS (done).
 - **Pipeline and model:** Python 3.11, pandas, geopandas, OSMnx, networkx, scikit-learn.
-- **Dashboard:** Next.js 16 + MapLibre + zustand from Leerie; routing and planner run in the browser.
+- **Dashboard:** Next.js 16 + MapLibre; routing and planner run in the browser.
 - **Hosting:** Vercel for the dashboard, with the files in `data/` as the offline fallback.
 - **Collaboration:** Dev A owns `sensor/` and the dashboard's app and components; Dev B owns `pipeline/`, `data/` and `dashboard/src/lib/leerie/`. Commit prefixes `[A]` and `[B]`; pull before every step.
 

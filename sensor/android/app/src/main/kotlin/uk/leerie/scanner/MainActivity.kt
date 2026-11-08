@@ -1,4 +1,4 @@
-package com.example.leerie_sensor
+package uk.leerie.scanner
 
 import io.flutter.embedding.android.FlutterActivity
 
