@@ -166,26 +166,47 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
   }
 
   Future<void> _pickReason(BuildContext context) async {
-    const reasons = <String, String>{
-      'dark': 'Too dark',
-      'followed': 'Followed',
-      'harassment': 'Harassment',
-      'other': 'Other',
-    };
+    const reasons = <(String, String, IconData)>[
+      ('dark', 'Too dark', Icons.lightbulb_outline),
+      ('followed', 'Followed', Icons.directions_walk),
+      ('harassment', 'Harassment', Icons.report_outlined),
+      ('other', 'Other', Icons.more_horiz),
+    ];
     final category = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: BchColor.bg,
       builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const ListTile(title: Text('Why does it feel uncomfortable here?')),
-            for (final entry in reasons.entries)
-              ListTile(
-                minTileHeight: 56,
-                title: Text(entry.value),
-                onTap: () => Navigator.of(sheet).pop(entry.key),
+        child: Padding(
+          padding: const EdgeInsets.all(BchSpace.s4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Semantics(
+                header: true,
+                child: Text(
+                  'Why does it feel uncomfortable here?',
+                  style: BchType.body.copyWith(
+                    color: BchColor.text,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-          ],
+              const SizedBox(height: BchSpace.s3),
+              const Divider(height: 1, color: BchColor.divider),
+              for (final (key, label, icon) in reasons) ...<Widget>[
+                const SizedBox(height: BchSpace.s3),
+                _reportButton(
+                  label: label,
+                  icon: icon,
+                  color: BchColor.live,
+                  wash: BchColor.live12,
+                  onPressed: () => Navigator.of(sheet).pop(key),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
