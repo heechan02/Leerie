@@ -65,36 +65,6 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
                 const Hairline(),
                 _metrics(),
                 const Hairline(),
-                _sources(),
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: BchSpace.s4,
-                    right: BchSpace.s4,
-                    bottom: BchSpace.s2,
-                  ),
-                  child: AccelMeter(
-                    level: controller.accelLevel,
-                    threshold: controller.settings.accelThreshold,
-                    active: controller.settings.accelDetector,
-                  ),
-                ),
-                const Hairline(),
-                _logHeader(),
-                const Hairline(),
-                Expanded(flex: 38, child: _log()),
-                const Hairline(),
-                Inspector(
-                  entry: controller.selected,
-                  rejection: controller.lastRejection,
-                  benchMode: controller.settings.gating == GatingMode.bench,
-                  onExpand: () {
-                    final selected = controller.selected;
-                    if (selected != null) {
-                      showEvidenceSheet(context, selected);
-                    }
-                  },
-                ),
-                const Hairline(),
                 _footer(context),
               ],
             );
@@ -128,7 +98,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text('LEERIE', style: BchType.consoleTitle),
+                const Text('NIGHT-LIGHT', style: BchType.consoleTitle),
                 Text(
                   controller.scanner.label,
                   maxLines: 1,
@@ -228,20 +198,11 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
             Positioned(
               left: BchSpace.s3,
               bottom: BchSpace.s3,
-              child: ValueListenableBuilder<VisionFrameResult>(
-                valueListenable: controller.vision,
-                builder: (context, result, _) {
-                  final tracking = result.tracks.where((t) => !t.fired).length;
-                  final text = result.tooDark
-                      ? 'Too dark to judge the road'
-                      : '${plural(tracking, 'candidate')} tracking';
-                  return _chip(
-                    child: Text(
-                      text,
-                      style: BchType.caption.copyWith(color: BchColor.ink72),
-                    ),
-                  );
-                },
+              child: _chip(
+                child: Text(
+                  _exposureText(),
+                  style: BchType.caption.copyWith(color: BchColor.ink72),
+                ),
               ),
             ),
           if (ready)
@@ -303,7 +264,7 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const PanelLabel('Road view'),
+          const PanelLabel('Camera'),
           const SizedBox(height: BchSpace.s3),
           Text(detail, style: BchType.body),
           const SizedBox(height: BchSpace.s4),
@@ -331,16 +292,24 @@ class _ConsoleScreenState extends State<ConsoleScreen> with WidgetsBindingObserv
 
   // ─── Metrics ──────────────────────────────────────────────────────────────
 
+  String _exposureText() {
+    final e = controller.exposure;
+    if (e == null || e.iso == null || e.exposureS == null) return 'No exposure data from camera';
+    return 'ISO ${e.iso!.round()} · 1/${(1 / e.exposureS!).round()} s · f/${e.aperture?.toStringAsFixed(1) ?? '?'}';
+  }
+
   Widget _metrics() {
+    final lum = controller.luminance;
     return MetricRow(
       cells: <Widget>[
         MetricCell(
-          value: '${controller.entries.length}',
-          label: 'Detections',
+          value: lum == null ? '—' : lum.toStringAsFixed(lum < 10 ? 2 : 0),
+          unit: 'rel.',
+          label: 'Light, not lux',
         ),
         MetricCell(
-          value: '${controller.uploadedCount}',
-          label: 'Uploaded',
+          value: '${controller.readingsRecorded}',
+          label: 'Readings this walk',
         ),
         MetricCell(
           value: controller.kmScanned.toStringAsFixed(1),

@@ -15,13 +15,13 @@ class DemoScanner {
 const phoneA = DemoScanner(
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000003',
-  'Phone A (bus 24)',
+  'Scanner A',
 );
 
 const phoneB = DemoScanner(
   '00000000-0000-0000-0000-000000000004',
   '00000000-0000-0000-0000-000000000005',
-  'Phone B (bin round N)',
+  'Scanner B',
 );
 
 const demoScanners = <DemoScanner>[phoneA, phoneB];

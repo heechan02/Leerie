@@ -31,7 +31,7 @@ import 'settings.dart';
 enum CameraStatus {
   idle('Camera idle'),
   starting('Starting the camera'),
-  ready('Watching the road'),
+  ready('Measuring light'),
   denied('Camera access refused'),
   unavailable('No usable camera');
 
@@ -135,6 +135,9 @@ class SessionController extends ChangeNotifier {
   double _lumSum = 0;
   int _lumCount = 0;
   ({double? iso, double? exposureS, double? aperture})? _lastExposure;
+  ({double? iso, double? exposureS, double? aperture})? get exposure => _lastExposure;
+  int readingsRecorded = 0;
+  DateTime _lastLumPaint = DateTime(0);
 
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<Position>? _posSub;
@@ -182,20 +185,16 @@ class SessionController extends ChangeNotifier {
     }
     if (recording == RecordingState.starting) return 'Starting the trip';
     if (recording == RecordingState.stopping) return 'Ending the trip';
-    final lum = luminance;
-    final light = lum == null
-        ? ' · light: no exposure data from camera'
-        : ' · light ${lum.toStringAsFixed(1)} (relative)';
     if (isRecording) {
       final started = startedAt;
       final since = started == null ? '' : ' since ${_hhmm(started)}';
       return uploadsOn
-          ? 'Recording$since · writing to ${_settings.supabase.host}$light'
-          : 'Recording$since · held on the phone$light';
+          ? 'Recording$since · writing to ${_settings.supabase.host}'
+          : 'Recording$since · held on the phone';
     }
     return supabaseConfigured
-        ? 'Not recording. Detections are held on the phone.'
-        : 'Not recording. Supabase is not configured; detections are held on the phone.';
+        ? 'Not recording.'
+        : 'Not recording. Supabase is not set; readings stay on the phone.';
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -347,6 +346,12 @@ class SessionController extends ChangeNotifier {
       luminance = lum;
     }
     _tickFps();
+    // Repaint the readout twice a second even without a GPS fix (indoors).
+    final now = DateTime.now();
+    if (now.difference(_lastLumPaint).inMilliseconds >= 500) {
+      _lastLumPaint = now;
+      notifyListeners();
+    }
     // Leerie's hazard vision detector is not run: this app only measures light.
   }
 
@@ -405,6 +410,7 @@ class SessionController extends ChangeNotifier {
         ));
         _lumSum = 0;
         _lumCount = 0;
+        readingsRecorded++;
 
         final previous = _lastDistanceFix;
         if (previous != null && position.accuracy <= 30) {
@@ -632,6 +638,7 @@ class SessionController extends ChangeNotifier {
 
     // The session id: random per walk, never tied to a person or phone.
     tripId = _uuid.v4();
+    readingsRecorded = 0;
     _lumSum = 0;
     _lumCount = 0;
 
