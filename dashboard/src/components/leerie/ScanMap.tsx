@@ -35,6 +35,21 @@ async function loadSegments(): Promise<{ data: Segments; source: string }> {
 type Hover = { street: Props; x: number; y: number; width: number; height: number };
 type Mode = "map" | "plan";
 const PICKED = "#7fd4ff"; // streets to light: not on the score ramp, so they stand out from it
+// Report clusters: orange to deep red by count. Not yellow, which already means well lit here.
+const HOT_LOW = "#f08a24", HOT_HIGH = "#b3121f";
+
+/** One point per street that two or more walks reported, at its middle vertex: per-street, never raw taps. */
+function confirmedHotspots(fs: Segments["features"]): GeoJSON.FeatureCollection<GeoJSON.Point, { count: number }> {
+  return {
+    type: "FeatureCollection",
+    features: fs.filter((f) => (f.properties.reports_confirmed ?? 0) > 0).map((f) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: f.geometry.coordinates[Math.floor(f.geometry.coordinates.length / 2)] },
+      properties: { count: (f.properties.reports_possible ?? 0) + (f.properties.reports_confirmed ?? 0) },
+    })),
+  };
+}
+
 const boxPolygon = ([w, s, e, n]: Box): GeoJSON.Feature<GeoJSON.Polygon> => ({
   type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] },
 });
@@ -84,6 +99,7 @@ export function ScanMap() {
     };
   }, [loaded, weights, plan]);
 
+  const hotspots = useMemo(() => (loaded ? confirmedHotspots(loaded.data.features) : null), [loaded]);
   const style = useMemo(() => buildMapStyle({ ...NIGHT, action: NIGHT.lit, committed: NIGHT.lit }), []);
   const counts = useMemo(() => {
     const fs = loaded?.data.features ?? [];
@@ -170,6 +186,20 @@ export function ScanMap() {
                 paint={{ "line-color": PICKED, "line-width": 4, "line-dasharray": [1, 1.5] }} />
               <Layer id="segments-picked" type="line" filter={["==", ["get", "_picked"], true]}
                 layout={{ "line-cap": "round" }} paint={{ "line-color": PICKED, "line-width": 6 }} />
+            </Source>
+          )}
+          {hotspots && (
+            <Source id="hotspots" type="geojson" data={hotspots} cluster clusterRadius={40}
+              clusterProperties={{ count: ["+", ["get", "count"]] }}>
+              <Layer id="hotspots-circle" type="circle" paint={{
+                "circle-color": ["interpolate", ["linear"], ["get", "count"], 1, HOT_LOW, 20, HOT_HIGH],
+                "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 11, 20, 22],
+                "circle-stroke-color": "#0b1526", "circle-stroke-width": 2, "circle-opacity": 0.92,
+              }} />
+              <Layer id="hotspots-count" type="symbol" layout={{
+                "text-field": ["to-string", ["get", "count"]], "text-font": ["Noto Sans Bold"], "text-size": 13,
+                "text-allow-overlap": true,
+              }} paint={{ "text-color": "#ffffff" }} />
             </Source>
           )}
           {mode === "plan" && box && (

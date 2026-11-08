@@ -366,3 +366,4 @@ button { font: inherit; color: inherit; }
 .lr-button:disabled { opacity: 0.4; cursor: default; }
 .night .maplibregl-ctrl-group { background: var(--rail-2); }
 .night .maplibregl-ctrl-group .maplibregl-ctrl-icon { filter: invert(1); }
+.lr-dot { display: inline-block; width: 26px; height: 12px; border-radius: var(--r-full); }

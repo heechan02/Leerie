@@ -5,4 +5,6 @@ export type SegmentProps = {
   brightness_stops: number | null; brightness_lo: number | null; brightness_hi: number | null;
   L: number | null; R: number; C: number | null; score: number | null; inspect?: boolean; forecast?: boolean;
   lamps_per_100m?: number | null;
+  /** Uncomfortable reports on the street; confirmed is 1 once two different walks reported it. */
+  reports_possible?: number; reports_confirmed?: number;
 };
