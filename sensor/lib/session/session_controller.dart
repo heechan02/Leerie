@@ -194,9 +194,8 @@ class SessionController extends ChangeNotifier {
           ? 'Recording$since · writing to ${_settings.supabase.host}'
           : 'Recording$since · held on the phone';
     }
-    return supabaseConfigured
-        ? 'Not recording.'
-        : 'Not recording. Supabase is not set; readings stay on the phone.';
+    // The upload line under it already says when Supabase is not set.
+    return 'Not recording.';
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
